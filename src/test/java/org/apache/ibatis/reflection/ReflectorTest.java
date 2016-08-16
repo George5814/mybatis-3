@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2016 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -15,10 +15,21 @@
  */
 package org.apache.ibatis.reflection;
 
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
+
+import java.io.Serializable;
+import java.util.List;
+
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class ReflectorTest {
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testGetSetterType() throws Exception {
@@ -64,4 +75,127 @@ public class ReflectorTest {
   static class Section extends AbstractEntity implements Entity<Long> {
   }
 
+  @Test
+  public void shouldResolveSetterParam() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    assertEquals(String.class, reflector.getSetterType("id"));
+  }
+
+  @Test
+  public void shouldResolveParameterizedSetterParam() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    assertEquals(List.class, reflector.getSetterType("list"));
+  }
+
+  @Test
+  public void shouldResolveArraySetterParam() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    Class<?> clazz = reflector.getSetterType("array");
+    assertTrue(clazz.isArray());
+    assertEquals(String.class, clazz.getComponentType());
+  }
+
+  @Test
+  public void shouldResolveGetterType() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    assertEquals(String.class, reflector.getGetterType("id"));
+  }
+
+  @Test
+  public void shouldResolveSetterTypeFromPrivateField() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    assertEquals(String.class, reflector.getSetterType("fld"));
+  }
+
+  @Test
+  public void shouldResolveGetterTypeFromPublicField() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    assertEquals(String.class, reflector.getGetterType("pubFld"));
+  }
+
+  @Test
+  public void shouldResolveParameterizedGetterType() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    assertEquals(List.class, reflector.getGetterType("list"));
+  }
+
+  @Test
+  public void shouldResolveArrayGetterType() throws Exception {
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(Child.class);
+    Class<?> clazz = reflector.getGetterType("array");
+    assertTrue(clazz.isArray());
+    assertEquals(String.class, clazz.getComponentType());
+  }
+
+  static abstract class Parent<T extends Serializable> {
+    protected T id;
+    protected List<T> list;
+    protected T[] array;
+    private T fld;
+    public T pubFld;
+    public T getId() {
+      return id;
+    }
+    public void setId(T id) {
+      this.id = id;
+    }
+    public List<T> getList() {
+      return list;
+    }
+    public void setList(List<T> list) {
+      this.list = list;
+    }
+    public T[] getArray() {
+      return array;
+    }
+    public void setArray(T[] array) {
+      this.array = array;
+    }
+    public T getFld() {
+      return fld;
+    }
+  }
+
+  static class Child extends Parent<String> {
+  }
+
+  @Test
+  public void shouldResoleveReadonlySetterWithOverload() throws Exception {
+    class BeanClass implements BeanInterface<String> {
+      public void setId(String id) {}
+    }
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(BeanClass.class);
+    assertEquals(String.class, reflector.getSetterType("id"));
+  }
+
+  interface BeanInterface<T> {
+    void setId(T id);
+  }
+
+  @Test
+  public void shouldSettersWithUnrelatedArgTypesThrowException() throws Exception {
+    @SuppressWarnings("unused")
+    class BeanClass {
+      public void setTheProp(String arg) {}
+      public void setTheProp(Integer arg) {}
+    }
+    expectedException.expect(ReflectionException.class);
+    expectedException.expectMessage(allOf(
+        containsString("theProp"),
+        containsString("BeanClass"),
+        containsString("java.lang.String"),
+        containsString("java.lang.Integer")));
+    ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+    Reflector reflector = reflectorFactory.findForClass(BeanClass.class);
+    reflector.getSetterType("theProp");
+  }
 }

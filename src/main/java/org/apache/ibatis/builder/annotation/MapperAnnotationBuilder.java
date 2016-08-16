@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2016 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -62,6 +62,7 @@ import org.apache.ibatis.builder.BuilderException;
 import org.apache.ibatis.builder.IncompleteElementException;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
+import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
 import org.apache.ibatis.executor.keygen.NoKeyGenerator;
@@ -76,6 +77,7 @@ import org.apache.ibatis.mapping.ResultSetType;
 import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.mapping.StatementType;
+import org.apache.ibatis.reflection.TypeParameterResolver;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
@@ -336,7 +338,7 @@ public class MapperAnnotationBuilder {
           resultSetType,
           flushCache,
           useCache,
-          // TODO issue #577
+          // TODO gcode issue #577
           false,
           keyGenerator,
           keyProperty,
@@ -345,7 +347,7 @@ public class MapperAnnotationBuilder {
           null,
           languageDriver,
           // ResultSets
-          null);
+          options != null ? nullOrEmpty(options.resultSets()) : null);
     }
   }
   
@@ -361,10 +363,10 @@ public class MapperAnnotationBuilder {
   private Class<?> getParameterType(Method method) {
     Class<?> parameterType = null;
     Class<?>[] parameterTypes = method.getParameterTypes();
-    for (int i = 0; i < parameterTypes.length; i++) {
-      if (!RowBounds.class.isAssignableFrom(parameterTypes[i]) && !ResultHandler.class.isAssignableFrom(parameterTypes[i])) {
+    for (Class<?> currentParameterType : parameterTypes) {
+      if (!RowBounds.class.isAssignableFrom(currentParameterType) && !ResultHandler.class.isAssignableFrom(currentParameterType)) {
         if (parameterType == null) {
-          parameterType = parameterTypes[i];
+          parameterType = currentParameterType;
         } else {
           // issue #135
           parameterType = ParamMap.class;
@@ -376,44 +378,49 @@ public class MapperAnnotationBuilder {
 
   private Class<?> getReturnType(Method method) {
     Class<?> returnType = method.getReturnType();
-    // issue #508
-    if (void.class.equals(returnType)) {
-      ResultType rt = method.getAnnotation(ResultType.class);
-      if (rt != null) {
-        returnType = rt.value();
-      } 
-    } else if (Collection.class.isAssignableFrom(returnType)) {
-      Type returnTypeParameter = method.getGenericReturnType();
-      if (returnTypeParameter instanceof ParameterizedType) {
-        Type[] actualTypeArguments = ((ParameterizedType) returnTypeParameter).getActualTypeArguments();
+    Type resolvedReturnType = TypeParameterResolver.resolveReturnType(method, type);
+    if (resolvedReturnType instanceof Class) {
+      returnType = (Class<?>) resolvedReturnType;
+      if (returnType.isArray()) {
+        returnType = returnType.getComponentType();
+      }
+      // gcode issue #508
+      if (void.class.equals(returnType)) {
+        ResultType rt = method.getAnnotation(ResultType.class);
+        if (rt != null) {
+          returnType = rt.value();
+        }
+      }
+    } else if (resolvedReturnType instanceof ParameterizedType) {
+      ParameterizedType parameterizedType = (ParameterizedType) resolvedReturnType;
+      Class<?> rawType = (Class<?>) parameterizedType.getRawType();
+      if (Collection.class.isAssignableFrom(rawType) || Cursor.class.isAssignableFrom(rawType)) {
+        Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
         if (actualTypeArguments != null && actualTypeArguments.length == 1) {
-          returnTypeParameter = actualTypeArguments[0];
-          if (returnTypeParameter instanceof Class) {
+          Type returnTypeParameter = actualTypeArguments[0];
+          if (returnTypeParameter instanceof Class<?>) {
             returnType = (Class<?>) returnTypeParameter;
           } else if (returnTypeParameter instanceof ParameterizedType) {
-            // (issue #443) actual type can be a also a parameterized type
+            // (gcode issue #443) actual type can be a also a parameterized type
             returnType = (Class<?>) ((ParameterizedType) returnTypeParameter).getRawType();
           } else if (returnTypeParameter instanceof GenericArrayType) {
             Class<?> componentType = (Class<?>) ((GenericArrayType) returnTypeParameter).getGenericComponentType();
-            // (issue #525) support List<byte[]>
+            // (gcode issue #525) support List<byte[]>
             returnType = Array.newInstance(componentType, 0).getClass();
           }
         }
-      }
-    } else if (method.isAnnotationPresent(MapKey.class) && Map.class.isAssignableFrom(returnType)) {
-      // (issue 504) Do not look into Maps if there is not MapKey annotation
-      Type returnTypeParameter = method.getGenericReturnType();
-      if (returnTypeParameter instanceof ParameterizedType) {
-        Type[] actualTypeArguments = ((ParameterizedType) returnTypeParameter).getActualTypeArguments();
-        if (actualTypeArguments != null && actualTypeArguments.length == 2) {
-          returnTypeParameter = actualTypeArguments[1];
-          if (returnTypeParameter instanceof Class) {
-            returnType = (Class<?>) returnTypeParameter;
-          } else if (returnTypeParameter instanceof ParameterizedType) {
-            // (issue 443) actual type can be a also a parameterized type
-            returnType = (Class<?>) ((ParameterizedType) returnTypeParameter).getRawType();
+      } else if (method.isAnnotationPresent(MapKey.class) && Map.class.isAssignableFrom(rawType)) {
+        // (gcode issue 504) Do not look into Maps if there is not MapKey annotation
+        Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
+          if (actualTypeArguments != null && actualTypeArguments.length == 2) {
+            Type returnTypeParameter = actualTypeArguments[1];
+            if (returnTypeParameter instanceof Class<?>) {
+              returnType = (Class<?>) returnTypeParameter;
+            } else if (returnTypeParameter instanceof ParameterizedType) {
+              // (gcode issue 443) actual type can be a also a parameterized type
+              returnType = (Class<?>) ((ParameterizedType) returnTypeParameter).getRawType();
+            }
           }
-        }
       }
     }
 
@@ -519,7 +526,7 @@ public class MapperAnnotationBuilder {
       resultMappings.add(resultMapping);
     }
   }
-
+  
   private String nestedSelectId(Result result) {
     String nestedSelect = result.one().select();
     if (nestedSelect.length() < 1) {

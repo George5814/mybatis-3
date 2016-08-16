@@ -1,22 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2010-2012 the original author or authors.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+       Copyright 2009-2016 the original author or authors.
 
-    http://www.apache.org/licenses/LICENSE-2.0
+       Licensed under the Apache License, Version 2.0 (the "License");
+       you may not use this file except in compliance with the License.
+       You may obtain a copy of the License at
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+          http://www.apache.org/licenses/LICENSE-2.0
+
+       Unless required by applicable law or agreed to in writing, software
+       distributed under the License is distributed on an "AS IS" BASIS,
+       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       See the License for the specific language governing permissions and
+       limitations under the License.
+
 -->
-
-<!-- version: $Id$ -->
-
 <document xmlns="http://maven.apache.org/XDOC/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
 
@@ -79,7 +78,7 @@ MyBatis 很大程度简化了你的代码而且保持简洁,很容易理解和�
   <subsection name="SqlSessions" id="sqlSessions">
   <p>
 使用 MyBatis 的主要 Java 接口就是 SqlSession。尽管你可以使用这个接口执行命令,获
-取映射器和管理事务。我们会讨论 SqlSession 本身更多,但是首先我们还是要了解如果获取
+取映射器和管理事务。我们会讨论 SqlSession 本身更多,但是首先我们还是要了解如何获取
 一个 SqlSession 实例。SqlSessions 是由 SqlSessionFactory 实例创建的。SqlSessionFactory 对
 象 包 含 创 建 SqlSession 实 例 的 所 有 方 法 。 而 SqlSessionFactory 本 身 是 由
 SqlSessionFactoryBuilder 创建的,它可以从 XML 配置,注解或手动配置 Java 来创建
@@ -275,7 +274,7 @@ BLE)
 个方法会返回一个 Configuration 实例,在运行时你可以使用它来自检 MyBatis 的配置。
   </p>
   <p><span class="label important">注意</span> 如果你已经使用之前版本 MyBatis,你要回忆那些 session,transaction 和 batch
-都是分离的。现在和以往不同了,这些都包含在 session 的范围内了。你需要处理分开处理
+都是分离的。现在和以往不同了,这些都包含在 session 的作用域内了。你需要处理分开处理
 事务或批量操作来得到它们的效果。
   </p>
 
@@ -371,7 +370,7 @@ public interface ResultHandler<T> {
 
   <h5>事务控制方法</h5>
   <p>
-控制事务范围有四个方法。
+控制事务作用域有四个方法。
 当然,
 如果你已经选择了自动提交或你正在使用外部事务管
 理器,这就没有任何效果了。然而,如果你正在使用 JDBC 事务管理员,由 Connection 实
@@ -678,7 +677,9 @@ fetchSize=-1 ,
 , 
   timeout=-1 
 useGeneratedKeys=false ,
-keyProperty=”id”。
+keyProperty=”id” ,
+keyColumn=”” ,
+resultSets=””。
 理解 Java 注解是很
 重要的,因为没有办法来指定“null”
 作为值。因此,一旦你使用了 Options
@@ -745,14 +746,11 @@ keyProperty=”id”。
 基于执行的映射语句, 
 MyBatis
 会实例化这个类,然后执行由 provider
-指定的方法. 这个方法可以选择性的接
-受参数对象作为它的唯一参数,
-但是必
-须只指定该参数或者没有参数。属性:
-type,method。type 属性是类的完全限
-定名。method 是该类中的那个方法名。
+指定的方法.
+该方法可以有选择地接受参数对象.(In MyBatis 3.4 or later, it's allow multiple parameters)
+属性: type,method。type 属性是类。method 属性是方法名。
 注意:
-这节之后是对 SelectBuilder 类的
+这节之后是对 类的
 讨论,它可以帮助你以干净,容于阅读
 的方式来构建动态 SQL。
 </td>
@@ -845,6 +843,53 @@ User getUserById(Integer id);
 })
 @Select("select * from company where id = #{id}")
 Company getCompanyById(Integer id);</source>
+
+  <p>This example shows solo parameter using the Sql Provider annotation:</p>
+  <source><![CDATA[@SelectProvider(type = UserSqlBuilder.class, method = "buildGetUsersByName")
+List<User> getUsersByName(String name);
+
+class UserSqlBuilder {
+  public String buildGetUsersByName(final String name) {
+    return new SQL(){{
+      SELECT("*");
+      FROM("users");
+      if (name != null) {
+        WHERE("name like #{value} || '%'");
+      }
+      ORDER_BY("id");
+    }}.toString();
+  }
+}]]></source>
+
+  <p>This example shows multiple parameters using the Sql Provider annotation:</p>
+  <source><![CDATA[@SelectProvider(type = UserSqlBuilder.class, method = "buildGetUsersByName")
+List<User> getUsersByName(
+    @Param("name") String name, @Param("orderByColumn") String orderByColumn);
+
+class UserSqlBuilder {
+
+  // If not use @Param, you should be define same arguments with mapper method
+  public String buildGetUsersByName(
+      final String name, final String orderByColumn) {
+    return new SQL(){{
+      SELECT("*");
+      FROM("users");
+      WHERE("name like #{name} || '%'");
+      ORDER_BY(orderByColumn);
+    }}.toString();
+  }
+
+  // If use @Param, you can define only arguments to be used
+  public String buildGetUsersByName(@Param("orderByColumn") final String orderByColumn) {
+    return new SQL(){{
+      SELECT("*");
+      FROM("users");
+      WHERE("name like #{name} || '%'");
+      ORDER_BY(orderByColumn);
+    }}.toString();
+  }
+}]]></source>
+
   </subsection>
 
   </section>

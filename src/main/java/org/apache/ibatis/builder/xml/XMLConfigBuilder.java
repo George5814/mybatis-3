@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2016 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import org.apache.ibatis.datasource.DataSourceFactory;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.loader.ProxyFactory;
 import org.apache.ibatis.io.Resources;
+import org.apache.ibatis.io.VFS;
+import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.mapping.DatabaseIdProvider;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.parsing.XNode;
@@ -37,6 +39,7 @@ import org.apache.ibatis.reflection.ReflectorFactory;
 import org.apache.ibatis.reflection.factory.ObjectFactory;
 import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 import org.apache.ibatis.session.AutoMappingBehavior;
+import org.apache.ibatis.session.AutoMappingUnknownColumnBehavior;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.LocalCacheScope;
@@ -45,6 +48,7 @@ import org.apache.ibatis.type.JdbcType;
 
 /**
  * @author Clinton Begin
+ * @author Kazuki Shimizu
  */
 public class XMLConfigBuilder extends BaseBuilder {
 
@@ -97,15 +101,15 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void parseConfiguration(XNode root) {
     try {
-      Properties settings = settingsAsPropertiess(root.evalNode("settings"));
       //issue #117 read properties first
       propertiesElement(root.evalNode("properties"));
+      Properties settings = settingsAsProperties(root.evalNode("settings"));
       loadCustomVfs(settings);
       typeAliasesElement(root.evalNode("typeAliases"));
       pluginElement(root.evalNode("plugins"));
       objectFactoryElement(root.evalNode("objectFactory"));
       objectWrapperFactoryElement(root.evalNode("objectWrapperFactory"));
-      reflectionFactoryElement(root.evalNode("reflectionFactory"));
+      reflectorFactoryElement(root.evalNode("reflectorFactory"));
       settingsElement(settings);
       // read it after objectFactory and objectWrapperFactory issue #631
       environmentsElement(root.evalNode("environments"));
@@ -117,7 +121,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
-  private Properties settingsAsPropertiess(XNode context) {
+  private Properties settingsAsProperties(XNode context) {
     if (context == null) {
       return new Properties();
     }
@@ -138,7 +142,9 @@ public class XMLConfigBuilder extends BaseBuilder {
       String[] clazzes = value.split(",");
       for (String clazz : clazzes) {
         if (!clazz.isEmpty()) {
-          configuration.setVfsImpl(Resources.classForName(clazz));
+          @SuppressWarnings("unchecked")
+          Class<? extends VFS> vfsImpl = (Class<? extends VFS>)Resources.classForName(clazz);
+          configuration.setVfsImpl(vfsImpl);
         }
       }
     }
@@ -198,7 +204,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
-  private void reflectionFactoryElement(XNode context) throws Exception {
+  private void reflectorFactoryElement(XNode context) throws Exception {
     if (context != null) {
        String type = context.getStringAttribute("type");
        ReflectorFactory factory = (ReflectorFactory) resolveClass(type).newInstance();
@@ -230,6 +236,7 @@ public class XMLConfigBuilder extends BaseBuilder {
 
   private void settingsElement(Properties props) throws Exception {
     configuration.setAutoMappingBehavior(AutoMappingBehavior.valueOf(props.getProperty("autoMappingBehavior", "PARTIAL")));
+    configuration.setAutoMappingUnknownColumnBehavior(AutoMappingUnknownColumnBehavior.valueOf(props.getProperty("autoMappingUnknownColumnBehavior", "NONE")));
     configuration.setCacheEnabled(booleanValueOf(props.getProperty("cacheEnabled"), true));
     configuration.setProxyFactory((ProxyFactory) createInstance(props.getProperty("proxyFactory")));
     configuration.setLazyLoadingEnabled(booleanValueOf(props.getProperty("lazyLoadingEnabled"), false));
@@ -248,8 +255,11 @@ public class XMLConfigBuilder extends BaseBuilder {
     configuration.setSafeResultHandlerEnabled(booleanValueOf(props.getProperty("safeResultHandlerEnabled"), true));
     configuration.setDefaultScriptingLanguage(resolveClass(props.getProperty("defaultScriptingLanguage")));
     configuration.setCallSettersOnNulls(booleanValueOf(props.getProperty("callSettersOnNulls"), false));
+    configuration.setUseActualParamName(booleanValueOf(props.getProperty("useActualParamName"), true));
     configuration.setLogPrefix(props.getProperty("logPrefix"));
-    configuration.setLogImpl(resolveClass(props.getProperty("logImpl")));
+    @SuppressWarnings("unchecked")
+    Class<? extends Log> logImpl = (Class<? extends Log>)resolveClass(props.getProperty("logImpl"));
+    configuration.setLogImpl(logImpl);
     configuration.setConfigurationFactory(resolveClass(props.getProperty("configurationFactory")));
   }
 

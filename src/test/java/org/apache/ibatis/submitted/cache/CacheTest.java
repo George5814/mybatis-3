@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2016 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -258,6 +258,48 @@ public class CacheTest {
       Assert.assertEquals(3, pm.findWithFlushCache().size());
     } finally {
       sqlSession4.close();
+    }
+  }
+
+  @Test
+  public void shouldApplyCacheNamespaceRef() {
+    {
+      SqlSession sqlSession = sqlSessionFactory.openSession(true);
+      try {
+        PersonMapper pm = sqlSession.getMapper(PersonMapper.class);
+        Assert.assertEquals(2, pm.findAll().size());
+        Person p = new Person(3, "hello", "world");
+        pm.createWithoutFlushCache(p);
+      } finally {
+        sqlSession.close();
+      }
+    }
+    {
+      SqlSession sqlSession = sqlSessionFactory.openSession(true);
+      try {
+        PersonMapper pm = sqlSession.getMapper(PersonMapper.class);
+        Assert.assertEquals(2, pm.findAll().size());
+      } finally {
+        sqlSession.close();
+      }
+    }
+    {
+      SqlSession sqlSession = sqlSessionFactory.openSession(true);
+      try {
+        ImportantPersonMapper pm = sqlSession.getMapper(ImportantPersonMapper.class);
+        Assert.assertEquals(3, pm.findWithFlushCache().size());
+      } finally {
+        sqlSession.close();
+      }
+    }
+    {
+      SqlSession sqlSession = sqlSessionFactory.openSession(true);
+      try {
+        PersonMapper pm = sqlSession.getMapper(PersonMapper.class);
+        Assert.assertEquals(3, pm.findAll().size());
+      } finally {
+        sqlSession.close();
+      }
     }
   }
 }

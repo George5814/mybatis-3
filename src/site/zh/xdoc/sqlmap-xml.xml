@@ -1,22 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2010-2012 the original author or authors.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+       Copyright 2009-2016 the original author or authors.
 
-  http://www.apache.org/licenses/LICENSE-2.0
+       Licensed under the Apache License, Version 2.0 (the "License");
+       you may not use this file except in compliance with the License.
+       You may obtain a copy of the License at
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+          http://www.apache.org/licenses/LICENSE-2.0
+
+       Unless required by applicable law or agreed to in writing, software
+       distributed under the License is distributed on an "AS IS" BASIS,
+       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       See the License for the specific language governing permissions and
+       limitations under the License.
+
 -->
-
-<!-- version: $Id$ -->
-
 <document xmlns="http://maven.apache.org/XDOC/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
 
@@ -326,6 +325,18 @@ ps.setInt(1,id);]]></source>
     keyProperty="id">
   insert into Author (username,password,email,bio)
   values (#{username},#{password},#{email},#{bio})
+</insert>]]></source>
+
+        <p>
+          If your database also supports multi-row insert, you can pass a list or an array of <code>Author</code>s and retrieve the auto-generated keys.
+        </p>
+
+        <source><![CDATA[<insert id="insertAuthor" useGeneratedKeys="true"
+    keyProperty="id">
+  insert into Author (username, password, email, bio) values
+  <foreach item="item" collection="list" separator=",">
+    (#{item.username}, #{item.password}, #{item.email}, #{item.bio})
+  </foreach>
 </insert>]]></source>
 
         <p>对于不支持自动生成类型的数据库或可能不支持自动生成主键 JDBC 驱动来说，MyBatis 有另外一种方法来生成主键。
@@ -787,17 +798,16 @@ resultMap 元素有很多子元素和一个值得讨论的结构。
           <tbody>
             <tr>
               <td><code>id</code></td>
-              <td>A unique identifier in this namespace that can be used to reference this result map.</td>
+              <td>当前命名空间中的一个唯一标识，用于标识一个result map.</td>
             </tr>
             <tr>
               <td><code>type</code></td>
-              <td>A fully qualified Java class name, or a type alias (see the table above for the list of built-in type aliases). 
+              <td>类的全限定名, 或者一个类型别名 (内置的别名可以参考上面的表格). 
               </td>
             </tr>
             <tr>
               <td><code>autoMapping</code></td>
-              <td>If present, MyBatis will enable or disable the automapping for this ResultMap. 
-                This attribute overrides the global autoMappingBehavior. Default: unset. 
+              <td>如果设置这个属性，MyBatis将会为这个ResultMap开启或者关闭自动映射。这个属性会覆盖全局的属性autoMappingBehavior。默认值为：unset。 
               </td>
             </tr>
           </tbody>
@@ -1038,22 +1048,13 @@ jdbcType
             <tr>
               <td><code>select</code></td>
               <td>
-                The ID of another mapped statement that will load the complex type required by this
-                property mapping. The values retrieved from columns specified in the column attribute
-                will be passed to the target select statement as parameters. See the Association element
-                for more.
+                用于加载复杂类型属性的映射语句的ID,从column中检索出来的数据，将作为此select语句的参数。具体请参考Association标签。
               </td>
             </tr>
             <tr>
               <td><code>resultMap</code></td>
               <td>
-                This is the ID of a ResultMap that can map the nested results of this argument into an
-                appropriate object graph. This is an alternative to using a call to another select
-                statement. It allows you to join multiple tables together into a single <code>ResultSet</code>. Such
-                a <code>ResultSet</code> will contain duplicated, repeating groups of data that needs to be
-                decomposed and mapped properly to a nested object graph. To facilitate this, MyBatis
-                lets you "chain" result maps together, to deal with the nested results. See the
-                Association element below for more.
+                ResultMap的ID，可以将嵌套的结果集映射到一个合适的对象树中，功能和select属性相似，它可以实现将多表连接操作的结果映射成一个单一的<code>ResultSet</code>。这样的<code>ResultSet</code>将会将包含重复或部分数据重复的结果集正确的映射到嵌套的对象树中。为了实现它, MyBatis允许你 “串联” ResultMap,以便解决嵌套结果集的问题。想了解更多内容，请参考下面的Association元素。
               </td>
             </tr>
           </tbody>

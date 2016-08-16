@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2016 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,10 +34,28 @@ public class ByteArrayTypeHandlerTest extends BaseTypeHandlerTest {
 
   @Override
   @Test
-  public void shouldGetResultFromResultSet() throws Exception {
+  public void shouldGetResultFromResultSetByName() throws Exception {
     when(rs.getBytes("column")).thenReturn(new byte[] { 1, 2, 3 });
     when(rs.wasNull()).thenReturn(false);
     assertArrayEquals(new byte[] { 1, 2, 3 }, TYPE_HANDLER.getResult(rs, "column"));
+  }
+
+  @Override
+  public void shouldGetResultNullFromResultSetByName() throws Exception {
+    // Unnecessary
+  }
+
+  @Override
+  @Test
+  public void shouldGetResultFromResultSetByPosition() throws Exception {
+    when(rs.getBytes(1)).thenReturn(new byte[] { 1, 2, 3 });
+    when(rs.wasNull()).thenReturn(false);
+    assertArrayEquals(new byte[] { 1, 2, 3 }, TYPE_HANDLER.getResult(rs, 1));
+  }
+
+  @Override
+  public void shouldGetResultNullFromResultSetByPosition() throws Exception {
+    // Unnecessary
   }
 
   @Override
@@ -47,5 +65,10 @@ public class ByteArrayTypeHandlerTest extends BaseTypeHandlerTest {
     when(cs.wasNull()).thenReturn(false);
     assertArrayEquals(new byte[] { 1, 2, 3 }, TYPE_HANDLER.getResult(cs, 1));
   }
+
+  @Override
+  public void shouldGetResultNullFromCallableStatement() throws Exception {
+    // Unnecessary
+ }
 
 }
