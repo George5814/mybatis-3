@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
+ * sql的date不用转化，直接设置。java.util.Date需要转化为sql的date
  * @author Clinton Begin
  */
 public class SqlDateTypeHandler extends BaseTypeHandler<Date> {

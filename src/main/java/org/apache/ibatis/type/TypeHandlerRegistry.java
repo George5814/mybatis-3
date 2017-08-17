@@ -34,6 +34,8 @@ import org.apache.ibatis.io.ResolverUtil;
 import org.apache.ibatis.io.Resources;
 
 /**
+ *
+ * 类型处理器的注册器
  * @author Clinton Begin
  */
 public final class TypeHandlerRegistry {

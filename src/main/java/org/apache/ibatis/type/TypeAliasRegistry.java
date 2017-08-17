@@ -33,10 +33,14 @@ import org.apache.ibatis.io.ResolverUtil;
 import org.apache.ibatis.io.Resources;
 
 /**
+ * 类型别名注册器,在配置中可以直接使用，不用全名也不用重新配置别名。
  * @author Clinton Begin
  */
 public class TypeAliasRegistry {
-
+  
+  /**
+   * 类型别名注册容器，在判断时不区分别名大小写，会一律都转为小写。
+   */
   private final Map<String, Class<?>> TYPE_ALIASES = new HashMap<String, Class<?>>();
 
   public TypeAliasRegistry() {
@@ -59,7 +63,11 @@ public class TypeAliasRegistry {
     registerAlias("double[]", Double[].class);
     registerAlias("float[]", Float[].class);
     registerAlias("boolean[]", Boolean[].class);
-
+    
+    /*
+    所有的基本类型的别名首字母都是下划线(_)
+     */
+    
     registerAlias("_byte", byte.class);
     registerAlias("_long", long.class);
     registerAlias("_short", short.class);
@@ -108,6 +116,7 @@ public class TypeAliasRegistry {
         return null;
       }
       // issue #748
+      //解析时将别名转为全部小写
       String key = string.toLowerCase(Locale.ENGLISH);
       Class<T> value;
       if (TYPE_ALIASES.containsKey(key)) {
@@ -147,6 +156,7 @@ public class TypeAliasRegistry {
     registerAlias(alias, type);
   }
 
+  //注册别名
   public void registerAlias(String alias, Class<?> value) {
     if (alias == null) {
       throw new TypeException("The parameter alias cannot be null");
@@ -168,6 +178,7 @@ public class TypeAliasRegistry {
   }
   
   /**
+   * 获取所有类型的别名
    * @since 3.2.2
    */
   public Map<String, Class<?>> getTypeAliases() {

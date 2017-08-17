@@ -18,6 +18,7 @@ package org.apache.ibatis.type;
 import org.apache.ibatis.exceptions.PersistenceException;
 
 /**
+ * 类型异常，继承自持久化异常
  * @author Clinton Begin
  */
 public class TypeException extends PersistenceException {

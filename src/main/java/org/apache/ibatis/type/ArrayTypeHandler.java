@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
+ * 数组类型处理类，继承自基本类型处理类
  * @author Clinton Begin
  */
 public class ArrayTypeHandler extends BaseTypeHandler<Object> {
@@ -30,7 +31,10 @@ public class ArrayTypeHandler extends BaseTypeHandler<Object> {
     super();
   }
 
-  @Override
+  /*
+  设置非空参数，预处理声明。
+  对与PreparedStatement的指定位置的占位符设置对一个的参数值
+   */
   public void setNonNullParameter(PreparedStatement ps, int i, Object parameter, JdbcType jdbcType) throws SQLException {
     ps.setArray(i, (Array) parameter);
   }

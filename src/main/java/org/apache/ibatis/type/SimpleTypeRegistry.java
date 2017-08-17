@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
+ * 用于注册java基本类型的包装类和String类
  * @author Clinton Begin
  */
 public class SimpleTypeRegistry {
