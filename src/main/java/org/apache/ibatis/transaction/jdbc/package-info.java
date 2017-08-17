@@ -15,5 +15,7 @@
  */
 /**
  * JDBC transaction.
+ *
+ * JDBC的事务基础包。
  */
 package org.apache.ibatis.transaction.jdbc;

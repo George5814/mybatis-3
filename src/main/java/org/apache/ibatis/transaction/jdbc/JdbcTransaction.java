@@ -30,7 +30,9 @@ import org.apache.ibatis.transaction.TransactionException;
  * It relies on the connection retrieved from the dataSource to manage the scope of the transaction.
  * Delays connection retrieval until getConnection() is called.
  * Ignores commit or rollback requests when autocommit is on.
- *
+ * <br>
+ *    {@link Transaction}直接使用jdbc的提交／回滚等机制。依赖数据源的连接来管理事务的范围。
+ *    延时连接，当开启自动提交后，会忽略提价和回滚请求。
  * @author Clinton Begin
  *
  * @see JdbcTransactionFactory
@@ -39,9 +41,13 @@ public class JdbcTransaction implements Transaction {
 
   private static final Log log = LogFactory.getLog(JdbcTransaction.class);
 
+  //数据库连接
   protected Connection connection;
+  //数据源
   protected DataSource dataSource;
+  //事务隔离级别
   protected TransactionIsolationLevel level;
+  //设置事务是否需要自动提交
   protected boolean autoCommmit;
 
   public JdbcTransaction(DataSource ds, TransactionIsolationLevel desiredLevel, boolean desiredAutoCommit) {
@@ -50,11 +56,10 @@ public class JdbcTransaction implements Transaction {
     autoCommmit = desiredAutoCommit;
   }
 
-  public JdbcTransaction(Connection connection) {
+  JdbcTransaction(Connection connection) {
     this.connection = connection;
   }
-
-  @Override
+  //获取数据库连接
   public Connection getConnection() throws SQLException {
     if (connection == null) {
       openConnection();
@@ -62,7 +67,7 @@ public class JdbcTransaction implements Transaction {
     return connection;
   }
 
-  @Override
+  //提交，在自动提交开启时该方法不生效
   public void commit() throws SQLException {
     if (connection != null && !connection.getAutoCommit()) {
       if (log.isDebugEnabled()) {
@@ -71,8 +76,8 @@ public class JdbcTransaction implements Transaction {
       connection.commit();
     }
   }
-
-  @Override
+  
+  //回滚，在自动提交开启时该方法不生效
   public void rollback() throws SQLException {
     if (connection != null && !connection.getAutoCommit()) {
       if (log.isDebugEnabled()) {
@@ -82,7 +87,7 @@ public class JdbcTransaction implements Transaction {
     }
   }
 
-  @Override
+  //关闭，将自动提交设置为开启状态并关闭连接
   public void close() throws SQLException {
     if (connection != null) {
       resetAutoCommit();
@@ -131,6 +136,7 @@ public class JdbcTransaction implements Transaction {
     }
   }
 
+  //打开数据库连接并设置事务级别和是否自动提交
   protected void openConnection() throws SQLException {
     if (log.isDebugEnabled()) {
       log.debug("Opening JDBC Connection");
@@ -142,7 +148,6 @@ public class JdbcTransaction implements Transaction {
     setDesiredAutoCommit(autoCommmit);
   }
 
-  @Override
   public Integer getTimeout() throws SQLException {
     return null;
   }

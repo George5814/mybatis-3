@@ -17,11 +17,12 @@ package org.apache.ibatis.transaction;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 /**
  * Wraps a database connection.
  * Handles the connection lifecycle that comprises: its creation, preparation, commit/rollback and close. 
+ *
+ * 包装数据库的连接，处理包括创建，准备，提交／回滚和关闭的连接生命周期。
  *
  * @author Clinton Begin
  */

@@ -18,9 +18,12 @@ package org.apache.ibatis.transaction;
 import org.apache.ibatis.exceptions.PersistenceException;
 
 /**
+ *
+ * 事务异常，继承自持久化异常。都继承自Runtime异常
  * @author Clinton Begin
  */
-public class TransactionException extends PersistenceException {
+public class
+TransactionException extends PersistenceException {
 
   private static final long serialVersionUID = -433589569461084605L;
 
