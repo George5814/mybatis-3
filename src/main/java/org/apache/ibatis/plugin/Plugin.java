@@ -26,11 +26,17 @@ import java.util.Set;
 import org.apache.ibatis.reflection.ExceptionUtil;
 
 /**
+ *
+ * 实现了java拦截器【InvocationHandler】的插件类，可以实现反射调用。
+ *
+ * 反射调用插件处理类的执行方法
+ *
  * @author Clinton Begin
  */
 public class Plugin implements InvocationHandler {
 
   private Object target;
+  //插件
   private Interceptor interceptor;
   private Map<Class<?>, Set<Method>> signatureMap;
 
@@ -39,7 +45,11 @@ public class Plugin implements InvocationHandler {
     this.interceptor = interceptor;
     this.signatureMap = signatureMap;
   }
-
+  
+  /**
+   *
+   * 通过该静态方法将目标对象和拦截器插件关联在一起并返回对目标对象的动态代理对象。
+   */
   public static Object wrap(Object target, Interceptor interceptor) {
     Map<Class<?>, Set<Method>> signatureMap = getSignatureMap(interceptor);
     Class<?> type = target.getClass();
@@ -56,6 +66,7 @@ public class Plugin implements InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      //先调用插件然后调用目标方法
       Set<Method> methods = signatureMap.get(method.getDeclaringClass());
       if (methods != null && methods.contains(method)) {
         return interceptor.intercept(new Invocation(target, method, args));

@@ -20,13 +20,23 @@ import javax.sql.DataSource;
 import org.apache.ibatis.transaction.TransactionFactory;
 
 /**
+ * 环境类
  * @author Clinton Begin
  */
 public final class Environment {
+  //指定的环境id
   private final String id;
+  //指定的事务处理工厂类
   private final TransactionFactory transactionFactory;
+  //指定的数据源
   private final DataSource dataSource;
-
+  
+  /**
+   * 三个参数缺一不可
+   * @param id
+   * @param transactionFactory
+   * @param dataSource
+   */
   public Environment(String id, TransactionFactory transactionFactory, DataSource dataSource) {
     if (id == null) {
       throw new IllegalArgumentException("Parameter 'id' must not be null");

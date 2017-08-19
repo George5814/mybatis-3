@@ -91,6 +91,7 @@ import org.apache.ibatis.type.TypeAliasRegistry;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ * mybatis的主配置类，不管是编程式还是配置式都需要在实例化该类
  * @author Clinton Begin
  */
 public class Configuration {
@@ -137,10 +138,15 @@ public class Configuration {
    */
   protected Class<?> configurationFactory;
 
+  //mapper映射，映射mapper接口和xml文件中或者注解上的sql
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
+  //拦截器链,可用来注册实现了Interceptor接口的插件
   protected final InterceptorChain interceptorChain = new InterceptorChain();
+  //类型处理器的注册器，mybatis自带的类型处理器和自定义处理器
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();
+  //类型别名注册器，mybatis自带的类型别名或者自定义的类型别名
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
+  //语言驱动注册器
   protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
 
   protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection");
@@ -170,13 +176,16 @@ public class Configuration {
   }
 
   public Configuration() {
+    //注册事务别名
     typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
     typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
 
+    //注册数据源别名
     typeAliasRegistry.registerAlias("JNDI", JndiDataSourceFactory.class);
     typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
     typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
 
+    //注册缓存算法别名
     typeAliasRegistry.registerAlias("PERPETUAL", PerpetualCache.class);
     typeAliasRegistry.registerAlias("FIFO", FifoCache.class);
     typeAliasRegistry.registerAlias("LRU", LruCache.class);
@@ -185,6 +194,7 @@ public class Configuration {
 
     typeAliasRegistry.registerAlias("DB_VENDOR", VendorDatabaseIdProvider.class);
 
+    //注册语言驱动别名，xml和
     typeAliasRegistry.registerAlias("XML", XMLLanguageDriver.class);
     typeAliasRegistry.registerAlias("RAW", RawLanguageDriver.class);
 

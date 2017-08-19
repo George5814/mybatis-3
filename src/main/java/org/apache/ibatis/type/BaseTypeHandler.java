@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2017 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@ import org.apache.ibatis.executor.result.ResultMapException;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ *
+ * 所有类型处理的基本抽象类，该类对参数设置和返回结果进行了处理。
+ * 使用了模板方法模式，使得继承该抽象类的子类实现模板方法，以完成各自的功能。
  * @author Clinton Begin
  * @author Simone Tripodi
  */
@@ -49,6 +52,7 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
       }
     } else {
       try {
+        //应用模板方法
         setNonNullParameter(ps, i, parameter, jdbcType);
       } catch (Exception e) {
         throw new TypeException("Error setting non null for parameter #" + i + " with JdbcType " + jdbcType + " . " +
@@ -61,6 +65,7 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
   public T getResult(ResultSet rs, String columnName) throws SQLException {
     T result;
     try {
+      //应用模板方法
       result = getNullableResult(rs, columnName);
     } catch (Exception e) {
       throw new ResultMapException("Error attempting to get column '" + columnName + "' from result set.  Cause: " + e, e);
@@ -75,6 +80,7 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
   public T getResult(ResultSet rs, int columnIndex) throws SQLException {
     T result;
     try {
+      //模板方法
       result = getNullableResult(rs, columnIndex);
     } catch (Exception e) {
       throw new ResultMapException("Error attempting to get column #" + columnIndex+ " from result set.  Cause: " + e, e);
@@ -85,10 +91,18 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
       return result;
     }
   }
-
+  
+  /**
+   * 存储过程的返回结果
+   * @param cs
+   * @param columnIndex
+   * @return
+   * @throws SQLException
+   */
   public T getResult(CallableStatement cs, int columnIndex) throws SQLException {
     T result;
     try {
+      //模板方法，在子类中实现
       result = getNullableResult(cs, columnIndex);
     } catch (Exception e) {
       throw new ResultMapException("Error attempting to get column #" + columnIndex+ " from callable statement.  Cause: " + e, e);
@@ -99,6 +113,7 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
       return result;
     }
   }
+  
 
   public abstract void setNonNullParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException;
 

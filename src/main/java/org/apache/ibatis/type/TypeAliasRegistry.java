@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2017 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import org.apache.ibatis.io.Resources;
 
 /**
  * 类型别名注册器,在配置中可以直接使用，不用全名也不用重新配置别名。
+ * 内部注册了八大基本类型和包装类的别名及其数组的别名，也注册了date和list，map等集合类。
  * @author Clinton Begin
  */
 public class TypeAliasRegistry {
@@ -107,7 +108,13 @@ public class TypeAliasRegistry {
 
     registerAlias("ResultSet", ResultSet.class);
   }
-
+  
+  /**
+   * 查找指定别名的类型，如果没有直接解析该别名并返回类型
+   * @param string
+   * @param <T>
+   * @return
+   */
   @SuppressWarnings("unchecked")
   // throws class cast exception as well if types cannot be assigned
   public <T> Class<T> resolveAlias(String string) {
@@ -133,7 +140,12 @@ public class TypeAliasRegistry {
   public void registerAliases(String packageName){
     registerAliases(packageName, Object.class);
   }
-
+  
+  /**
+   * 扫描包下的类并为其注册别名
+   * @param packageName
+   * @param superType
+   */
   public void registerAliases(String packageName, Class<?> superType){
     ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<Class<?>>();
     resolverUtil.find(new ResolverUtil.IsA(superType), packageName);
@@ -146,7 +158,11 @@ public class TypeAliasRegistry {
       }
     }
   }
-
+  
+  /**
+   * 直接对type类型注册别名，如果没有设置{@link Alias}注解，则别名为type的简称
+   * @param type
+   */
   public void registerAlias(Class<?> type) {
     String alias = type.getSimpleName();
     Alias aliasAnnotation = type.getAnnotation(Alias.class);
@@ -155,8 +171,17 @@ public class TypeAliasRegistry {
     } 
     registerAlias(alias, type);
   }
-
-  //注册别名
+  
+  /**
+   * 注册别名，注册时会将指定的别名都转为小写，这样可以避免传入大小写不同导致找不到对应的类型的诡异现象。
+   * <p>
+   *     不论是直接注册类型，还是注册字符串方式的类名，还是以包的方式传入自动扫描。最终都会调用该方法进行注册。
+   *     本方法为注册别名的核心方法。
+   *
+   * </p>
+   * @param alias
+   * @param value
+   */
   public void registerAlias(String alias, Class<?> value) {
     if (alias == null) {
       throw new TypeException("The parameter alias cannot be null");

@@ -35,13 +35,17 @@ import java.lang.reflect.Type;
 import java.util.*;
 
 /**
+ *
+ * 映射的方法
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
  */
 public class MapperMethod {
 
+  //要执行的sql命令
   private final SqlCommand command;
+  //方法签名（记录参数查询记录数，返回值类型等）
   private final MethodSignature method;
 
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
@@ -49,25 +53,29 @@ public class MapperMethod {
     this.method = new MethodSignature(config, mapperInterface, method);
   }
 
+  //mapper映射方法的执行器
   public Object execute(SqlSession sqlSession, Object[] args) {
     Object result;
+    //根据sqlcommand内设置的SqlCommandType属性执行不同的sql操作
     switch (command.getType()) {
-      case INSERT: {
+      case INSERT: {//插入数据
+        //将参数转化为sql的命令参数
     	Object param = method.convertArgsToSqlCommandParam(args);
+    	//对于insert，update，delete操作的返回结果出合理
         result = rowCountResult(sqlSession.insert(command.getName(), param));
         break;
       }
-      case UPDATE: {
+      case UPDATE: {//更新数据
         Object param = method.convertArgsToSqlCommandParam(args);
         result = rowCountResult(sqlSession.update(command.getName(), param));
         break;
       }
-      case DELETE: {
+      case DELETE: {//删除数据
         Object param = method.convertArgsToSqlCommandParam(args);
         result = rowCountResult(sqlSession.delete(command.getName(), param));
         break;
       }
-      case SELECT:
+      case SELECT://查询数据
         if (method.returnsVoid() && method.hasResultHandler()) {
           executeWithResultHandler(sqlSession, args);
           result = null;
@@ -82,7 +90,7 @@ public class MapperMethod {
           result = sqlSession.selectOne(command.getName(), param);
         }
         break;
-      case FLUSH:
+      case FLUSH://刷新批量的sql清单
         result = sqlSession.flushStatements();
         break;
       default:
@@ -94,7 +102,19 @@ public class MapperMethod {
     }
     return result;
   }
-
+  
+  /**
+   * 对于insert，update，delete操作
+   * <p>
+   *    根据sql执行返回的行数以及方法的返回类型进行转化操作。
+   *    如果返回类型为void，那直接返回null；
+   *    如果返回类型为Integer类型，则直接返回行数。
+   *    如果返回类型为Long类型，将返回行数强转为Long类型。
+   *    如果返回类型为Boolean类型，则通过判断行数是否大于0来转换。
+   * </p>
+   * @param rowCount
+   * @return
+   */
   private Object rowCountResult(int rowCount) {
     final Object result;
     if (method.returnsVoid()) {
@@ -198,7 +218,10 @@ public class MapperMethod {
     }
 
   }
-
+  
+  /**
+   * sql执行语句和sql的命令类型
+   */
   public static class SqlCommand {
 
     private final String name;
@@ -239,17 +262,27 @@ public class MapperMethod {
       return type;
     }
   }
-
+  
+  /**
+   * 方法签名
+   */
   public static class MethodSignature {
 
+    //是否返回多个结果，即多于一个返回结果
     private final boolean returnsMany;
+    //返回的是否为map
     private final boolean returnsMap;
+    //返回是否为空
     private final boolean returnsVoid;
+    //返回游标
     private final boolean returnsCursor;
+    //返回类型
     private final Class<?> returnType;
+    //映射的key
     private final String mapKey;
     private final Integer resultHandlerIndex;
     private final Integer rowBoundsIndex;
+    //参数名解析器
     private final ParamNameResolver paramNameResolver;
 
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {

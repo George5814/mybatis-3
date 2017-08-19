@@ -28,6 +28,8 @@ import org.apache.ibatis.reflection.ExceptionUtil;
 import org.apache.ibatis.session.SqlSession;
 
 /**
+ *
+ * mapper的动态代理类，对mapper接口和xml对应查询sql的代理
  * @author Clinton Begin
  * @author Eduardo Macarron
  */
@@ -55,10 +57,13 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     } catch (Throwable t) {
       throw ExceptionUtil.unwrapThrowable(t);
     }
+    //查询method对应的MapperMethod，先从缓存中取，缓存中没有再新建MapperMethod实例
     final MapperMethod mapperMethod = cachedMapperMethod(method);
+    //调用映射方法的执行方法
     return mapperMethod.execute(sqlSession, args);
   }
-
+  
+  
   private MapperMethod cachedMapperMethod(Method method) {
     MapperMethod mapperMethod = methodCache.get(method);
     if (mapperMethod == null) {

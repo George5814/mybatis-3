@@ -15,5 +15,7 @@
  */
 /**
  * Base package for handing plugins.
+ *
+ * 插件处理器的基本包
  */
 package org.apache.ibatis.plugin;

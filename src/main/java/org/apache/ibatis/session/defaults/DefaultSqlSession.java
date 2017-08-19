@@ -23,14 +23,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.ibatis.binding.BindingException;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.exceptions.ExceptionFactory;
 import org.apache.ibatis.exceptions.TooManyResultsException;
+import org.apache.ibatis.executor.BatchExecutor;
 import org.apache.ibatis.executor.BatchResult;
+import org.apache.ibatis.executor.CachingExecutor;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.Executor;
+import org.apache.ibatis.executor.ReuseExecutor;
+import org.apache.ibatis.executor.SimpleExecutor;
 import org.apache.ibatis.executor.result.DefaultMapResultHandler;
 import org.apache.ibatis.executor.result.DefaultResultContext;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -40,7 +43,7 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
 /**
- *
+ * 默认的sql会话
  * The default implementation for {@link SqlSession}.
  * Note that this class is not Thread-Safe.
  *
@@ -48,11 +51,23 @@ import org.apache.ibatis.session.SqlSession;
  */
 public class DefaultSqlSession implements SqlSession {
 
+  //mybatis的配置类
   private Configuration configuration;
+  /**
+   * 配置sql执行器
+   * 实现类有：{@linkplain }
+   *
+   * @see BatchExecutor
+   * @see CachingExecutor
+   * @see ReuseExecutor
+   * @see SimpleExecutor
+   */
   private Executor executor;
 
+  //是否自动提交
   private boolean autoCommit;
   private boolean dirty;
+  //游标列表
   private List<Cursor<?>> cursorList;
 
   public DefaultSqlSession(Configuration configuration, Executor executor, boolean autoCommit) {
