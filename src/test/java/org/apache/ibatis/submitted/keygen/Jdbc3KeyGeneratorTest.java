@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2016 the original author or authors.
+ *    Copyright 2009-2017 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,13 +22,18 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.ibatis.exceptions.PersistenceException;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import static com.googlecode.catchexception.apis.BDDCatchException.*;
+import static org.assertj.core.api.BDDAssertions.then;
 
 /**
  * @author liuzh
@@ -51,6 +56,7 @@ public class Jdbc3KeyGeneratorTest {
     ScriptRunner runner = new ScriptRunner(conn);
     runner.setLogWriter(null);
     runner.runScript(reader);
+    conn.close();
     reader.close();
     session.close();
   }
@@ -68,6 +74,22 @@ public class Jdbc3KeyGeneratorTest {
       for (Country country : countries) {
         assertNotNull(country.getId());
       }
+    } finally {
+      sqlSession.rollback();
+      sqlSession.close();
+    }
+  }
+
+  @Ignore("#782 was reverted. See #902.")
+  @Test
+  public void shouldErrorUndefineProperty()  {
+    SqlSession sqlSession = sqlSessionFactory.openSession();
+    try {
+      CountryMapper mapper = sqlSession.getMapper(CountryMapper.class);
+
+      when(mapper).insertUndefineKeyProperty(new Country("China", "CN"));
+      then(caughtException()).isInstanceOf(PersistenceException.class).hasMessageContaining(
+          "### Error updating database.  Cause: org.apache.ibatis.executor.ExecutorException: Error getting generated key or setting result to parameter object. Cause: org.apache.ibatis.executor.ExecutorException: No setter found for the keyProperty 'country_id' in org.apache.ibatis.submitted.keygen.Country.");
     } finally {
       sqlSession.rollback();
       sqlSession.close();
