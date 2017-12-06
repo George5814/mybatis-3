@@ -69,7 +69,12 @@ public class MapperRegistry {
   public <T> boolean hasMapper(Class<T> type) {
     return knownMappers.containsKey(type);
   }
-
+  
+  /**
+   * 只有在mapper为接口的情况下才允许注册，并为mapper设置对应的mapper代理
+   * @param type
+   * @param <T>
+   */
   public <T> void addMapper(Class<T> type) {
     if (type.isInterface()) {
       if (hasMapper(type)) {
@@ -77,6 +82,7 @@ public class MapperRegistry {
       }
       boolean loadCompleted = false;
       try {
+        //将mapper加入缓存中，这时候还没有缓存mapper要执行的方法
         knownMappers.put(type, new MapperProxyFactory<T>(type));
         // It's important that the type is added before the parser is run
         // otherwise the binding may automatically be attempted by the

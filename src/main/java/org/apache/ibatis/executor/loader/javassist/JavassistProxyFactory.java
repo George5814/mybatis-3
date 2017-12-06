@@ -40,6 +40,7 @@ import org.apache.ibatis.reflection.property.PropertyNamer;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * Javassist代理的工厂
  * @author Eduardo Macarron
  */
 public class JavassistProxyFactory implements org.apache.ibatis.executor.loader.ProxyFactory {
@@ -50,6 +51,7 @@ public class JavassistProxyFactory implements org.apache.ibatis.executor.loader.
 
   public JavassistProxyFactory() {
     try {
+      //加载ProxyFactory类
       Resources.classForName("javassist.util.proxy.ProxyFactory");
     } catch (Throwable e) {
       throw new IllegalStateException("Cannot enable lazy loading because Javassist is not available. Add Javassist to your classpath.", e);
@@ -70,6 +72,7 @@ public class JavassistProxyFactory implements org.apache.ibatis.executor.loader.
       // Not Implemented
   }
 
+  //创建代理类的方法
   static Object crateProxy(Class<?> type, MethodHandler callback, List<Class<?>> constructorArgTypes, List<Object> constructorArgs) {
 
     ProxyFactory enhancer = new ProxyFactory();

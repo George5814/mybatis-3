@@ -39,6 +39,7 @@ import org.apache.ibatis.reflection.invoker.SetFieldInvoker;
 import org.apache.ibatis.reflection.property.PropertyNamer;
 
 /**
+ * 反射器，该类表示定义了允许属性名和getter/setter方法间简单映射的类的定义信息的缓存集合
  * This class represents a cached set of class definition information that
  * allows for easy mapping between property names and getter/setter methods.
  *
@@ -61,6 +62,7 @@ public class Reflector {
 
   public Reflector(Class<?> clazz) {
     type = clazz;
+    //添加默认无参的构造方法
     addDefaultConstructor(clazz);
     addGetMethods(clazz);
     addSetMethods(clazz);
@@ -92,7 +94,11 @@ public class Reflector {
       }
     }
   }
-
+  
+  /**
+   * 反射获取所有以get或is开头的方法，并将其加入到map中
+   * @param cls
+   */
   private void addGetMethods(Class<?> cls) {
     Map<String, List<Method>> conflictingGetters = new HashMap<String, List<Method>>();
     Method[] methods = getClassMethods(cls);
@@ -119,6 +125,7 @@ public class Reflector {
       Iterator<Method> iterator = getters.iterator();
       Method firstMethod = iterator.next();
       if (getters.size() == 1) {
+        //getter方法没有冲突
         addGetMethod(propName, firstMethod);
       } else {
         Method getter = firstMethod;
@@ -126,13 +133,16 @@ public class Reflector {
         while (iterator.hasNext()) {
           Method method = iterator.next();
           Class<?> methodType = method.getReturnType();
+          //如果方法返回类型与第一个getter方法返回类型相同则跑出二义性异常
           if (methodType.equals(getterType)) {
             throw new ReflectionException("Illegal overloaded getter method with ambiguous type for property "
                 + propName + " in class " + firstMethod.getDeclaringClass()
                 + ".  This breaks the JavaBeans " + "specification and can cause unpredicatble results.");
           } else if (methodType.isAssignableFrom(getterType)) {
+            //非第一个getter方法返回类型是第一个getter方法返回类型父类
             // OK getter type is descendant
           } else if (getterType.isAssignableFrom(methodType)) {
+            //getterType类型是其他类型的父类，最后将getter方法返回类型降级为最具体的实现类
             getter = method;
             getterType = methodType;
           } else {
@@ -141,6 +151,7 @@ public class Reflector {
                 + ".  This breaks the JavaBeans " + "specification and can cause unpredicatble results.");
           }
         }
+        //将getter方法及其返回值加入到map缓存中
         addGetMethod(propName, getter);
       }
     }
@@ -153,7 +164,11 @@ public class Reflector {
       getTypes.put(name, typeToClass(returnType));
     }
   }
-
+  
+  /**
+   * 添加setter方法缓存，解析以set开头的方法并且只有一个参数
+   * @param cls
+   */
   private void addSetMethods(Class<?> cls) {
     Map<String, List<Method>> conflictingSetters = new HashMap<String, List<Method>>();
     Method[] methods = getClassMethods(cls);
@@ -177,7 +192,11 @@ public class Reflector {
     }
     list.add(method);
   }
-
+  
+  /**
+   * 解决setter冲突
+   * @param conflictingSetters
+   */
   private void resolveSetterConflicts(Map<String, List<Method>> conflictingSetters) {
     for (String propName : conflictingSetters.keySet()) {
       List<Method> setters = conflictingSetters.get(propName);
@@ -185,6 +204,9 @@ public class Reflector {
       Method match = null;
       ReflectionException exception = null;
       for (Method setter : setters) {
+        /**
+         *
+         */
         Class<?> paramType = setter.getParameterTypes()[0];
         if (paramType.equals(getterType)) {
           // should be the best match

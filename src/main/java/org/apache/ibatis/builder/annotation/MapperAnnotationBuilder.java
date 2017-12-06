@@ -87,6 +87,7 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.UnknownTypeHandler;
 
 /**
+ * mapper的注解构建器
  * @author Clinton Begin
  */
 public class MapperAnnotationBuilder {
@@ -100,28 +101,36 @@ public class MapperAnnotationBuilder {
 
   public MapperAnnotationBuilder(Configuration configuration, Class<?> type) {
     String resource = type.getName().replace('.', '/') + ".java (best guess)";
+    //mapper构建助手
     this.assistant = new MapperBuilderAssistant(configuration, resource);
     this.configuration = configuration;
     this.type = type;
-
+    
+    //sql注解类型容器加入增删改查四中注解
     sqlAnnotationTypes.add(Select.class);
     sqlAnnotationTypes.add(Insert.class);
     sqlAnnotationTypes.add(Update.class);
     sqlAnnotationTypes.add(Delete.class);
 
+    //sqlProviderAnnotationTypes也加入增删改查四种处理的注解
     sqlProviderAnnotationTypes.add(SelectProvider.class);
     sqlProviderAnnotationTypes.add(InsertProvider.class);
     sqlProviderAnnotationTypes.add(UpdateProvider.class);
     sqlProviderAnnotationTypes.add(DeleteProvider.class);
   }
 
+  
   public void parse() {
     String resource = type.toString();
+    //检查配置中是否已经加载了资源，如果已经加载则不再重新加载，否则加载资源
     if (!configuration.isResourceLoaded(resource)) {
       loadXmlResource();
       configuration.addLoadedResource(resource);
+      //构建助手设置当前的命名空间
       assistant.setCurrentNamespace(type.getName());
+      //解析缓存
       parseCache();
+      //解析缓存引用
       parseCacheRef();
       Method[] methods = type.getMethods();
       for (Method method : methods) {
@@ -153,11 +162,13 @@ public class MapperAnnotationBuilder {
     }
   }
 
+  //载入xml配置文件中的资源
   private void loadXmlResource() {
     // Spring may not know the real resource name so we check a flag
     // to prevent loading again a resource twice
     // this flag is set at XMLMapperBuilder#bindMapperForNamespace
     if (!configuration.isResourceLoaded("namespace:" + type.getName())) {
+      //type对应路径下同名的xml文件相对路径
       String xmlResource = type.getName().replace('.', '/') + ".xml";
       InputStream inputStream = null;
       try {
@@ -172,6 +183,7 @@ public class MapperAnnotationBuilder {
     }
   }
 
+  //解析CacheNamespace注解
   private void parseCache() {
     CacheNamespace cacheDomain = type.getAnnotation(CacheNamespace.class);
     if (cacheDomain != null) {
@@ -181,6 +193,7 @@ public class MapperAnnotationBuilder {
     }
   }
 
+  //解析CacheNamespaceRef注解
   private void parseCacheRef() {
     CacheNamespaceRef cacheDomainRef = type.getAnnotation(CacheNamespaceRef.class);
     if (cacheDomainRef != null) {
@@ -258,6 +271,7 @@ public class MapperAnnotationBuilder {
     return null;
   }
 
+  //解析方法的sql语句
   void parseStatement(Method method) {
     Class<?> parameterTypeClass = getParameterType(method);
     LanguageDriver languageDriver = getLanguageDriver(method);

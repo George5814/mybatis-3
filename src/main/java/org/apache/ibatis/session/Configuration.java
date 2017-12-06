@@ -102,23 +102,23 @@ public class Configuration {
   protected boolean safeResultHandlerEnabled = true;
   protected boolean mapUnderscoreToCamelCase = false;
   protected boolean aggressiveLazyLoading = true;
-  protected boolean multipleResultSetsEnabled = true;
-  protected boolean useGeneratedKeys = false;
-  protected boolean useColumnLabel = true;
-  protected boolean cacheEnabled = true;
+  protected boolean multipleResultSetsEnabled = true;//默认启用多个结果集
+  protected boolean useGeneratedKeys = false;//默认不使用生成key
+  protected boolean useColumnLabel = true;//默认启用列标签
+  protected boolean cacheEnabled = true;//默认启用缓存
   protected boolean callSettersOnNulls = false;
   protected boolean useActualParamName = true;
 
   protected String logPrefix;
   protected Class <? extends Log> logImpl;
-  protected Class <? extends VFS> vfsImpl;
-  protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
+  protected Class <? extends VFS> vfsImpl;//虚拟文件系统的实现类
+  protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;//设置默认的本地缓存范围为session级别
   protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
-  protected Set<String> lazyLoadTriggerMethods = new HashSet<String>(Arrays.asList(new String[] { "equals", "clone", "hashCode", "toString" }));
+  protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList(new String[] { "equals", "clone", "hashCode", "toString" }));//懒加载出发的方法,全为Object默认方法
   protected Integer defaultStatementTimeout;
   protected Integer defaultFetchSize;
-  protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
-  protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
+  protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;//默认的执行类型为simple，而非批量类型也非复用sql语句类型
+  protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;//默认只会自动映射简单的结果映射
   protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
 
   protected Properties variables = new Properties();
@@ -127,6 +127,7 @@ public class Configuration {
   protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
   protected boolean lazyLoadingEnabled = false;
+  //代理类使用javassist字节码生成器
   protected ProxyFactory proxyFactory = new JavassistProxyFactory(); // #224 Using internal Javassist instead of OGNL
 
   protected String databaseId;
@@ -710,7 +711,12 @@ public class Configuration {
   public void addInterceptor(Interceptor interceptor) {
     interceptorChain.addInterceptor(interceptor);
   }
-
+  
+  /**
+   * 按照包的形式扫描并注册mapper
+   * @param packageName
+   * @param superType
+   */
   public void addMappers(String packageName, Class<?> superType) {
     mapperRegistry.addMappers(packageName, superType);
   }
@@ -718,7 +724,12 @@ public class Configuration {
   public void addMappers(String packageName) {
     mapperRegistry.addMappers(packageName);
   }
-
+  
+  /**
+   * 注册单个mapper
+   * @param type
+   * @param <T>
+   */
   public <T> void addMapper(Class<T> type) {
     mapperRegistry.addMapper(type);
   }

@@ -26,6 +26,7 @@ public final class PropertyCopier {
     // Prevent Instantiation of Static Class
   }
 
+  //通过反射方式将源类的field属性值设置到目标类的同名field属性中
   public static void copyBeanProperties(Class<?> type, Object sourceBean, Object destinationBean) {
     Class<?> parent = type;
     while (parent != null) {
