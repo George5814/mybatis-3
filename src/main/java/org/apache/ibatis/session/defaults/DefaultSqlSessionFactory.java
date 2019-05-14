@@ -15,9 +15,6 @@
  */
 package org.apache.ibatis.session.defaults;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
 import org.apache.ibatis.exceptions.ExceptionFactory;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.Executor;
@@ -31,6 +28,9 @@ import org.apache.ibatis.transaction.Transaction;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.apache.ibatis.transaction.managed.ManagedTransactionFactory;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
  *
@@ -117,6 +117,7 @@ public class DefaultSqlSessionFactory implements SqlSessionFactory {
 
   private SqlSession openSessionFromConnection(ExecutorType execType, Connection connection) {
     try {
+      //默认自动提交事务
       boolean autoCommit;
       try {
         autoCommit = connection.getAutoCommit();
