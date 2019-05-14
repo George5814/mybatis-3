@@ -119,18 +119,27 @@ public class Configuration {
   protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
   protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
   protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList("equals", "clone", "hashCode", "toString"));
+  //默认 Sql 语句的超时时间，在org.apache.ibatis.executor.statement.BaseStatementHandler.setStatementTimeout处使用
   protected Integer defaultStatementTimeout;
+  //默认获取多少行数据，在org.apache.ibatis.executor.statement.BaseStatementHandler.setFetchSize处使用
   protected Integer defaultFetchSize;
+  //默认的执行类型为SIMPLE，可以在 Configuration 配置中手动指定
   protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
+  //在org.apache.ibatis.executor.resultset.DefaultResultSetHandler.shouldApplyAutomaticMappings 中使用
   protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
   protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
 
+  //变量
   protected Properties variables = new Properties();
+  //反射的工厂类
   protected ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+  //对象的工厂类
   protected ObjectFactory objectFactory = new DefaultObjectFactory();
+  //对象包装类的工厂类
   protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
   protected boolean lazyLoadingEnabled = false;
+  //代理工厂类
   protected ProxyFactory proxyFactory = new JavassistProxyFactory(); // #224 Using internal Javassist instead of OGNL
 
   protected String databaseId;
@@ -142,21 +151,32 @@ public class Configuration {
    */
   protected Class<?> configurationFactory;
 
+  //接口方法的注册器
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
+  // 拦截器链
   protected final InterceptorChain interceptorChain = new InterceptorChain();
+  //类型处理器的注册器
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();
+  //类型别名的注册器
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
+  //语言驱动的注册器
   protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
 
   protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection")
       .conflictMessageProducer((savedValue, targetValue) ->
           ". please check " + savedValue.getResource() + " and " + targetValue.getResource());
+  //缓存 Cache 实现接口的map
   protected final Map<String, Cache> caches = new StrictMap<>("Caches collection");
+  //结果映射的map
   protected final Map<String, ResultMap> resultMaps = new StrictMap<>("Result Maps collection");
+  //参数映射的map
   protected final Map<String, ParameterMap> parameterMaps = new StrictMap<>("Parameter Maps collection");
+  //key 生成器的 map
   protected final Map<String, KeyGenerator> keyGenerators = new StrictMap<>("Key Generators collection");
 
+  //已加载的资源
   protected final Set<String> loadedResources = new HashSet<>();
+  //Sql 片段
   protected final Map<String, XNode> sqlFragments = new StrictMap<>("XML fragments parsed from previous mappers");
 
   protected final Collection<XMLStatementBuilder> incompleteStatements = new LinkedList<>();
