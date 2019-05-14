@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2016 the original author or authors.
+ *    Copyright 2009-2019 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -26,15 +26,13 @@ import org.apache.ibatis.executor.BatchResult;
 /**
  * The primary Java interface for working with MyBatis.
  * Through this interface you can execute commands, get mappers and manage transactions.
- * <br/>
- * mybatis工作最主要的java接口，通过该接口你可以执行命令，获取MAPPER和管理事务
+ *
  * @author Clinton Begin
  */
 public interface SqlSession extends Closeable {
 
   /**
-   * 检索从sql语句查询出的单条记录
-   * Retrieve a single row mapped from the statement key
+   * Retrieve a single row mapped from the statement key.
    * @param <T> the returned object type
    * @param statement
    * @return Mapped object
@@ -42,7 +40,6 @@ public interface SqlSession extends Closeable {
   <T> T selectOne(String statement);
 
   /**
-   * 从sql语句和参数查询出唯一一条记录，如果查询出多余一条数据则会直接抛出异常。
    * Retrieve a single row mapped from the statement key and parameter.
    * @param <T> the returned object type
    * @param statement Unique identifier matching the statement to use.
@@ -80,8 +77,6 @@ public interface SqlSession extends Closeable {
   <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds);
 
   /**
-   * 返回map结果
-   *
    * The selectMap is a special case in that it is designed to convert a list
    * of results into a Map based on one of the properties in the resulting
    * objects.
@@ -167,7 +162,7 @@ public interface SqlSession extends Closeable {
 
   /**
    * Retrieve a single row mapped from the statement key and parameter
-   * using a {@code ResultHandler} and {@code RowBounds}
+   * using a {@code ResultHandler} and {@code RowBounds}.
    * @param statement Unique identifier matching the statement to use.
    * @param rowBounds RowBound instance to limit the query results
    * @param handler ResultHandler that will handle each retrieved row
@@ -182,8 +177,6 @@ public interface SqlSession extends Closeable {
   int insert(String statement);
 
   /**
-   * 使用给定的参数对象执行插入sql语句操作。
-   * insert内部和update执行时一样的。
    * Execute an insert statement with the given parameter object. Any generated
    * autoincrement values or selectKey entries will modify the given parameter
    * object properties. Only the number of rows affected will be returned.
@@ -258,18 +251,18 @@ public interface SqlSession extends Closeable {
   List<BatchResult> flushStatements();
 
   /**
-   * Closes the session
+   * Closes the session.
    */
   @Override
   void close();
 
   /**
-   * Clears local session cache
+   * Clears local session cache.
    */
   void clearCache();
 
   /**
-   * Retrieves current configuration
+   * Retrieves current configuration.
    * @return Configuration
    */
   Configuration getConfiguration();
@@ -283,7 +276,7 @@ public interface SqlSession extends Closeable {
   <T> T getMapper(Class<T> type);
 
   /**
-   * Retrieves inner database connection
+   * Retrieves inner database connection.
    * @return Connection
    */
   Connection getConnection();

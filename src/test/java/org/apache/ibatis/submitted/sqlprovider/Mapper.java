@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2016 the original author or authors.
+ *    Copyright 2009-2018 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -24,13 +24,14 @@ import org.apache.ibatis.annotations.InsertProvider;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 
-public interface Mapper {
+@BaseMapper.Meta(tableName = "users")
+public interface Mapper extends BaseMapper<User> {
   @SelectProvider(type = OurSqlBuilder.class, method = "buildGetUsersQuery")
   List<User> getUsers(List<Integer> allFilterIds);
 
   @SelectProvider(type = OurSqlBuilder.class, method = "buildGetUserQuery")
   User getUser(Integer userId);
- 
+
   @SelectProvider(type = OurSqlBuilder.class, method = "buildGetAllUsersQuery")
   List<User> getAllUsers();
 

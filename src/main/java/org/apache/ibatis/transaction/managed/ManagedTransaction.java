@@ -18,6 +18,7 @@ package org.apache.ibatis.transaction.managed;
 import java.sql.Connection;
 import java.sql.SQLException;
 import javax.sql.DataSource;
+
 import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 import org.apache.ibatis.session.TransactionIsolationLevel;
@@ -29,10 +30,6 @@ import org.apache.ibatis.transaction.Transaction;
  * Ignores all commit or rollback requests.
  * By default, it closes the connection but can be configured not to do it.
  *
- * <br/>
- * {@link Transaction}使得容器管理事务的整个生命周期，直到getConnection()被调用时才去连接（延时连接），忽略所有的提交和回滚请求。
- * 默认的，它可以关闭连接，但也可以配置为什么都不做。
- *
  * @author Clinton Begin
  *
  * @see ManagedTransactionFactory
@@ -41,14 +38,10 @@ public class ManagedTransaction implements Transaction {
 
   private static final Log log = LogFactory.getLog(ManagedTransaction.class);
 
-  //java 的sql数据源
   private DataSource dataSource;
-  //事务隔离级别
   private TransactionIsolationLevel level;
-  //数据库连接
   private Connection connection;
-  //是否关闭数据库连接,通过设置该属性可以选择不关闭连接
-  private boolean closeConnection;
+  private final boolean closeConnection;
 
   public ManagedTransaction(Connection connection, boolean closeConnection) {
     this.connection = connection;
@@ -61,6 +54,7 @@ public class ManagedTransaction implements Transaction {
     this.closeConnection = closeConnection;
   }
 
+  @Override
   public Connection getConnection() throws SQLException {
     if (this.connection == null) {
       openConnection();
@@ -68,14 +62,17 @@ public class ManagedTransaction implements Transaction {
     return this.connection;
   }
 
+  @Override
   public void commit() throws SQLException {
     // Does nothing
   }
 
+  @Override
   public void rollback() throws SQLException {
     // Does nothing
   }
-  
+
+  @Override
   public void close() throws SQLException {
     if (this.closeConnection && this.connection != null) {
       if (log.isDebugEnabled()) {
@@ -89,14 +86,13 @@ public class ManagedTransaction implements Transaction {
     if (log.isDebugEnabled()) {
       log.debug("Opening JDBC Connection");
     }
-    //数据源建立连接
     this.connection = this.dataSource.getConnection();
     if (this.level != null) {
       this.connection.setTransactionIsolation(this.level.getLevel());
     }
   }
 
-  //获取超时时间
+  @Override
   public Integer getTimeout() throws SQLException {
     return null;
   }

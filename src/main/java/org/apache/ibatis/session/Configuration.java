@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2016 the original author or authors.
+ *    Copyright 2009-2019 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,14 +19,17 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 import org.apache.ibatis.binding.MapperRegistry;
 import org.apache.ibatis.builder.CacheRefResolver;
+import org.apache.ibatis.builder.IncompleteElementException;
 import org.apache.ibatis.builder.ResultMapResolver;
 import org.apache.ibatis.builder.annotation.MethodResolver;
 import org.apache.ibatis.builder.xml.XMLStatementBuilder;
@@ -88,37 +91,38 @@ import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.apache.ibatis.transaction.managed.ManagedTransactionFactory;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeAliasRegistry;
+import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
- * mybatis的主配置类，不管是编程式还是配置式都需要在实例化该类
  * @author Clinton Begin
  */
 public class Configuration {
 
   protected Environment environment;
 
-  protected boolean safeRowBoundsEnabled = false;
+  protected boolean safeRowBoundsEnabled;
   protected boolean safeResultHandlerEnabled = true;
-  protected boolean mapUnderscoreToCamelCase = false;
-  protected boolean aggressiveLazyLoading = true;
-  protected boolean multipleResultSetsEnabled = true;//默认启用多个结果集
-  protected boolean useGeneratedKeys = false;//默认不使用生成key
-  protected boolean useColumnLabel = true;//默认启用列标签
-  protected boolean cacheEnabled = true;//默认启用缓存
-  protected boolean callSettersOnNulls = false;
+  protected boolean mapUnderscoreToCamelCase;
+  protected boolean aggressiveLazyLoading;
+  protected boolean multipleResultSetsEnabled = true;
+  protected boolean useGeneratedKeys;
+  protected boolean useColumnLabel = true;
+  protected boolean cacheEnabled = true;
+  protected boolean callSettersOnNulls;
   protected boolean useActualParamName = true;
+  protected boolean returnInstanceForEmptyRow;
 
   protected String logPrefix;
-  protected Class <? extends Log> logImpl;
-  protected Class <? extends VFS> vfsImpl;//虚拟文件系统的实现类
-  protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;//设置默认的本地缓存范围为session级别
+  protected Class<? extends Log> logImpl;
+  protected Class<? extends VFS> vfsImpl;
+  protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
   protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
-  protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList(new String[] { "equals", "clone", "hashCode", "toString" }));//懒加载出发的方法,全为Object默认方法
+  protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList("equals", "clone", "hashCode", "toString"));
   protected Integer defaultStatementTimeout;
   protected Integer defaultFetchSize;
-  protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;//默认的执行类型为simple，而非批量类型也非复用sql语句类型
-  protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;//默认只会自动映射简单的结果映射
+  protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
+  protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
   protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
 
   protected Properties variables = new Properties();
@@ -127,7 +131,6 @@ public class Configuration {
   protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
   protected boolean lazyLoadingEnabled = false;
-  //代理类使用javassist字节码生成器
   protected ProxyFactory proxyFactory = new JavassistProxyFactory(); // #224 Using internal Javassist instead of OGNL
 
   protected String databaseId;
@@ -139,37 +142,34 @@ public class Configuration {
    */
   protected Class<?> configurationFactory;
 
-  //mapper映射，映射mapper接口和xml文件中或者注解上的sql
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
-  //拦截器链,可用来注册实现了Interceptor接口的插件
   protected final InterceptorChain interceptorChain = new InterceptorChain();
-  //类型处理器的注册器，mybatis自带的类型处理器和自定义处理器
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();
-  //类型别名注册器，mybatis自带的类型别名或者自定义的类型别名
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
-  //语言驱动注册器
   protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
 
-  protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection");
-  protected final Map<String, Cache> caches = new StrictMap<Cache>("Caches collection");
-  protected final Map<String, ResultMap> resultMaps = new StrictMap<ResultMap>("Result Maps collection");
-  protected final Map<String, ParameterMap> parameterMaps = new StrictMap<ParameterMap>("Parameter Maps collection");
-  protected final Map<String, KeyGenerator> keyGenerators = new StrictMap<KeyGenerator>("Key Generators collection");
+  protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection")
+      .conflictMessageProducer((savedValue, targetValue) ->
+          ". please check " + savedValue.getResource() + " and " + targetValue.getResource());
+  protected final Map<String, Cache> caches = new StrictMap<>("Caches collection");
+  protected final Map<String, ResultMap> resultMaps = new StrictMap<>("Result Maps collection");
+  protected final Map<String, ParameterMap> parameterMaps = new StrictMap<>("Parameter Maps collection");
+  protected final Map<String, KeyGenerator> keyGenerators = new StrictMap<>("Key Generators collection");
 
-  protected final Set<String> loadedResources = new HashSet<String>();
-  protected final Map<String, XNode> sqlFragments = new StrictMap<XNode>("XML fragments parsed from previous mappers");
+  protected final Set<String> loadedResources = new HashSet<>();
+  protected final Map<String, XNode> sqlFragments = new StrictMap<>("XML fragments parsed from previous mappers");
 
-  protected final Collection<XMLStatementBuilder> incompleteStatements = new LinkedList<XMLStatementBuilder>();
-  protected final Collection<CacheRefResolver> incompleteCacheRefs = new LinkedList<CacheRefResolver>();
-  protected final Collection<ResultMapResolver> incompleteResultMaps = new LinkedList<ResultMapResolver>();
-  protected final Collection<MethodResolver> incompleteMethods = new LinkedList<MethodResolver>();
+  protected final Collection<XMLStatementBuilder> incompleteStatements = new LinkedList<>();
+  protected final Collection<CacheRefResolver> incompleteCacheRefs = new LinkedList<>();
+  protected final Collection<ResultMapResolver> incompleteResultMaps = new LinkedList<>();
+  protected final Collection<MethodResolver> incompleteMethods = new LinkedList<>();
 
   /*
    * A map holds cache-ref relationship. The key is the namespace that
    * references a cache bound to another namespace and the value is the
    * namespace which the actual cache is bound to.
    */
-  protected final Map<String, String> cacheRefMap = new HashMap<String, String>();
+  protected final Map<String, String> cacheRefMap = new HashMap<>();
 
   public Configuration(Environment environment) {
     this();
@@ -177,16 +177,13 @@ public class Configuration {
   }
 
   public Configuration() {
-    //注册事务别名
     typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
     typeAliasRegistry.registerAlias("MANAGED", ManagedTransactionFactory.class);
 
-    //注册数据源别名
     typeAliasRegistry.registerAlias("JNDI", JndiDataSourceFactory.class);
     typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
     typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
 
-    //注册缓存算法别名
     typeAliasRegistry.registerAlias("PERPETUAL", PerpetualCache.class);
     typeAliasRegistry.registerAlias("FIFO", FifoCache.class);
     typeAliasRegistry.registerAlias("LRU", LruCache.class);
@@ -195,7 +192,6 @@ public class Configuration {
 
     typeAliasRegistry.registerAlias("DB_VENDOR", VendorDatabaseIdProvider.class);
 
-    //注册语言驱动别名，xml和
     typeAliasRegistry.registerAlias("XML", XMLLanguageDriver.class);
     typeAliasRegistry.registerAlias("RAW", RawLanguageDriver.class);
 
@@ -258,6 +254,14 @@ public class Configuration {
 
   public void setUseActualParamName(boolean useActualParamName) {
     this.useActualParamName = useActualParamName;
+  }
+
+  public boolean isReturnInstanceForEmptyRow() {
+    return returnInstanceForEmptyRow;
+  }
+
+  public void setReturnInstanceForEmptyRow(boolean returnEmptyInstance) {
+    this.returnInstanceForEmptyRow = returnEmptyInstance;
   }
 
   public String getDatabaseId() {
@@ -463,6 +467,18 @@ public class Configuration {
     return typeHandlerRegistry;
   }
 
+  /**
+   * Set a default {@link TypeHandler} class for {@link Enum}.
+   * A default {@link TypeHandler} is {@link org.apache.ibatis.type.EnumTypeHandler}.
+   * @param typeHandler a type handler class for {@link Enum}
+   * @since 3.4.5
+   */
+  public void setDefaultEnumTypeHandler(Class<? extends TypeHandler> typeHandler) {
+    if (typeHandler != null) {
+      getTypeHandlerRegistry().setDefaultEnumTypeHandler(typeHandler);
+    }
+  }
+
   public TypeAliasRegistry getTypeAliasRegistry() {
     return typeAliasRegistry;
   }
@@ -475,11 +491,11 @@ public class Configuration {
   }
 
   public ReflectorFactory getReflectorFactory() {
-	  return reflectorFactory;
+    return reflectorFactory;
   }
 
   public void setReflectorFactory(ReflectorFactory reflectorFactory) {
-	  this.reflectorFactory = reflectorFactory;
+    this.reflectorFactory = reflectorFactory;
   }
 
   public ObjectFactory getObjectFactory() {
@@ -509,15 +525,34 @@ public class Configuration {
     return languageRegistry;
   }
 
-  public void setDefaultScriptingLanguage(Class<?> driver) {
+  public void setDefaultScriptingLanguage(Class<? extends LanguageDriver> driver) {
     if (driver == null) {
       driver = XMLLanguageDriver.class;
     }
     getLanguageRegistry().setDefaultDriverClass(driver);
   }
 
-  public LanguageDriver getDefaultScriptingLanuageInstance() {
+  public LanguageDriver getDefaultScriptingLanguageInstance() {
     return languageRegistry.getDefaultDriver();
+  }
+
+  /**
+   * @since 3.5.1
+   */
+  public LanguageDriver getLanguageDriver(Class<? extends LanguageDriver> langClass) {
+    if (langClass == null) {
+      return languageRegistry.getDefaultDriver();
+    }
+    languageRegistry.register(langClass);
+    return languageRegistry.getDriver(langClass);
+  }
+
+  /**
+   * @deprecated Use {@link #getDefaultScriptingLanguageInstance()}
+   */
+  @Deprecated
+  public LanguageDriver getDefaultScriptingLanuageInstance() {
+    return getDefaultScriptingLanguageInstance();
   }
 
   public MetaObject newMetaObject(Object object) {
@@ -711,12 +746,7 @@ public class Configuration {
   public void addInterceptor(Interceptor interceptor) {
     interceptorChain.addInterceptor(interceptor);
   }
-  
-  /**
-   * 按照包的形式扫描并注册mapper
-   * @param packageName
-   * @param superType
-   */
+
   public void addMappers(String packageName, Class<?> superType) {
     mapperRegistry.addMappers(packageName, superType);
   }
@@ -724,12 +754,7 @@ public class Configuration {
   public void addMappers(String packageName) {
     mapperRegistry.addMappers(packageName);
   }
-  
-  /**
-   * 注册单个mapper
-   * @param type
-   * @param <T>
-   */
+
   public <T> void addMapper(Class<T> type) {
     mapperRegistry.addMapper(type);
   }
@@ -763,33 +788,58 @@ public class Configuration {
    * statement validation.
    */
   protected void buildAllStatements() {
-    if (!incompleteResultMaps.isEmpty()) {
-      synchronized (incompleteResultMaps) {
-        // This always throws a BuilderException.
-        incompleteResultMaps.iterator().next().resolve();
-      }
-    }
+    parsePendingResultMaps();
     if (!incompleteCacheRefs.isEmpty()) {
       synchronized (incompleteCacheRefs) {
-        // This always throws a BuilderException.
-        incompleteCacheRefs.iterator().next().resolveCacheRef();
+        incompleteCacheRefs.removeIf(x -> x.resolveCacheRef() != null);
       }
     }
     if (!incompleteStatements.isEmpty()) {
       synchronized (incompleteStatements) {
-        // This always throws a BuilderException.
-        incompleteStatements.iterator().next().parseStatementNode();
+        incompleteStatements.removeIf(x -> {
+          x.parseStatementNode();
+          return true;
+        });
       }
     }
     if (!incompleteMethods.isEmpty()) {
       synchronized (incompleteMethods) {
-        // This always throws a BuilderException.
-        incompleteMethods.iterator().next().resolve();
+        incompleteMethods.removeIf(x -> {
+          x.resolve();
+          return true;
+        });
       }
     }
   }
 
-  /*
+  private void parsePendingResultMaps() {
+    if (incompleteResultMaps.isEmpty()) {
+      return;
+    }
+    synchronized (incompleteResultMaps) {
+      boolean resolved;
+      IncompleteElementException ex = null;
+      do {
+        resolved = false;
+        Iterator<ResultMapResolver> iterator = incompleteResultMaps.iterator();
+        while (iterator.hasNext()) {
+          try {
+            iterator.next().resolve();
+            iterator.remove();
+            resolved = true;
+          } catch (IncompleteElementException e) {
+            ex = e;
+          }
+        }
+      } while (resolved);
+      if (!incompleteResultMaps.isEmpty() && ex != null) {
+        // At least one result map is unresolvable.
+        throw ex;
+      }
+    }
+  }
+
+  /**
    * Extracts namespace from fully qualified statement id.
    *
    * @param statementId
@@ -838,6 +888,7 @@ public class Configuration {
 
     private static final long serialVersionUID = -4950446264854982944L;
     private final String name;
+    private BiFunction<V, V, String> conflictMessageProducer;
 
     public StrictMap(String name, int initialCapacity, float loadFactor) {
       super(initialCapacity, loadFactor);
@@ -859,10 +910,24 @@ public class Configuration {
       this.name = name;
     }
 
+    /**
+     * Assign a function for producing a conflict error message when contains value with the same key.
+     * <p>
+     * function arguments are 1st is saved value and 2nd is target value.
+     * @param conflictMessageProducer A function for producing a conflict error message
+     * @return a conflict error message
+     * @since 3.5.0
+     */
+    public StrictMap<V> conflictMessageProducer(BiFunction<V, V, String> conflictMessageProducer) {
+      this.conflictMessageProducer = conflictMessageProducer;
+      return this;
+    }
+
     @SuppressWarnings("unchecked")
     public V put(String key, V value) {
       if (containsKey(key)) {
-        throw new IllegalArgumentException(name + " already contains value for " + key);
+        throw new IllegalArgumentException(name + " already contains value for " + key
+            + (conflictMessageProducer == null ? "" : conflictMessageProducer.apply(super.get(key), value)));
       }
       if (key.contains(".")) {
         final String shortKey = getShortName(key);
@@ -887,11 +952,6 @@ public class Configuration {
       return value;
     }
 
-    private String getShortName(String key) {
-      final String[] keyParts = key.split("\\.");
-      return keyParts[keyParts.length - 1];
-    }
-
     protected static class Ambiguity {
       final private String subject;
 
@@ -902,6 +962,11 @@ public class Configuration {
       public String getSubject() {
         return subject;
       }
+    }
+
+    private String getShortName(String key) {
+      final String[] keyParts = key.split("\\.");
+      return keyParts[keyParts.length - 1];
     }
   }
 

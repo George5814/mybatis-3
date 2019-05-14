@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2016 the original author or authors.
+ *    Copyright 2009-2019 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -15,11 +15,21 @@
  */
 package org.apache.ibatis.binding;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import org.apache.ibatis.annotations.Flush;
 import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlCommandType;
+import org.apache.ibatis.mapping.StatementType;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.ParamNameResolver;
 import org.apache.ibatis.reflection.TypeParameterResolver;
@@ -28,24 +38,15 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.*;
-
 /**
- *
- * 映射的方法
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
+ * @author Kazuki Shimizu
  */
 public class MapperMethod {
 
-  //要执行的sql命令
   private final SqlCommand command;
-  //方法签名（记录参数查询记录数，返回值类型等）
   private final MethodSignature method;
 
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
@@ -53,29 +54,25 @@ public class MapperMethod {
     this.method = new MethodSignature(config, mapperInterface, method);
   }
 
-  //mapper映射方法的执行器
   public Object execute(SqlSession sqlSession, Object[] args) {
     Object result;
-    //根据sqlcommand内设置的SqlCommandType属性执行不同的sql操作
     switch (command.getType()) {
-      case INSERT: {//插入数据
-        //将参数转化为sql的命令参数
-    	Object param = method.convertArgsToSqlCommandParam(args);
-    	//对于insert，update，delete操作的返回结果出合理
+      case INSERT: {
+        Object param = method.convertArgsToSqlCommandParam(args);
         result = rowCountResult(sqlSession.insert(command.getName(), param));
         break;
       }
-      case UPDATE: {//更新数据
+      case UPDATE: {
         Object param = method.convertArgsToSqlCommandParam(args);
         result = rowCountResult(sqlSession.update(command.getName(), param));
         break;
       }
-      case DELETE: {//删除数据
+      case DELETE: {
         Object param = method.convertArgsToSqlCommandParam(args);
         result = rowCountResult(sqlSession.delete(command.getName(), param));
         break;
       }
-      case SELECT://查询数据
+      case SELECT:
         if (method.returnsVoid() && method.hasResultHandler()) {
           executeWithResultHandler(sqlSession, args);
           result = null;
@@ -88,33 +85,25 @@ public class MapperMethod {
         } else {
           Object param = method.convertArgsToSqlCommandParam(args);
           result = sqlSession.selectOne(command.getName(), param);
+          if (method.returnsOptional()
+              && (result == null || !method.getReturnType().equals(result.getClass()))) {
+            result = Optional.ofNullable(result);
+          }
         }
         break;
-      case FLUSH://刷新批量的sql清单
+      case FLUSH:
         result = sqlSession.flushStatements();
         break;
       default:
         throw new BindingException("Unknown execution method for: " + command.getName());
     }
     if (result == null && method.getReturnType().isPrimitive() && !method.returnsVoid()) {
-      throw new BindingException("Mapper method '" + command.getName() 
+      throw new BindingException("Mapper method '" + command.getName()
           + " attempted to return null from a method with a primitive return type (" + method.getReturnType() + ").");
     }
     return result;
   }
-  
-  /**
-   * 对于insert，update，delete操作
-   * <p>
-   *    根据sql执行返回的行数以及方法的返回类型进行转化操作。
-   *    如果返回类型为void，那直接返回null；
-   *    如果返回类型为Integer类型，则直接返回行数。
-   *    如果返回类型为Long类型，将返回行数强转为Long类型。
-   *    如果返回类型为Boolean类型，则通过判断行数是否大于0来转换。
-   * </p>
-   * @param rowCount
-   * @return
-   */
+
   private Object rowCountResult(int rowCount) {
     final Object result;
     if (method.returnsVoid()) {
@@ -133,9 +122,10 @@ public class MapperMethod {
 
   private void executeWithResultHandler(SqlSession sqlSession, Object[] args) {
     MappedStatement ms = sqlSession.getConfiguration().getMappedStatement(command.getName());
-    if (void.class.equals(ms.getResultMaps().get(0).getType())) {
-      throw new BindingException("method " + command.getName() 
-          + " needs either a @ResultMap annotation, a @ResultType annotation," 
+    if (!StatementType.CALLABLE.equals(ms.getStatementType())
+        && void.class.equals(ms.getResultMaps().get(0).getType())) {
+      throw new BindingException("method " + command.getName()
+          + " needs either a @ResultMap annotation, a @ResultType annotation,"
           + " or a resultType attribute in XML so a ResultHandler can be used as a parameter.");
     }
     Object param = method.convertArgsToSqlCommandParam(args);
@@ -152,9 +142,9 @@ public class MapperMethod {
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<E>selectList(command.getName(), param, rowBounds);
+      result = sqlSession.selectList(command.getName(), param, rowBounds);
     } else {
-      result = sqlSession.<E>selectList(command.getName(), param);
+      result = sqlSession.selectList(command.getName(), param);
     }
     // issue #510 Collections & arrays support
     if (!method.getReturnType().isAssignableFrom(result.getClass())) {
@@ -172,9 +162,9 @@ public class MapperMethod {
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<T>selectCursor(command.getName(), param, rowBounds);
+      result = sqlSession.selectCursor(command.getName(), param, rowBounds);
     } else {
-      result = sqlSession.<T>selectCursor(command.getName(), param);
+      result = sqlSession.selectCursor(command.getName(), param);
     }
     return result;
   }
@@ -187,10 +177,17 @@ public class MapperMethod {
   }
 
   @SuppressWarnings("unchecked")
-  private <E> E[] convertToArray(List<E> list) {
-    E[] array = (E[]) Array.newInstance(method.getReturnType().getComponentType(), list.size());
-    array = list.toArray(array);
-    return array;
+  private <E> Object convertToArray(List<E> list) {
+    Class<?> arrayComponentType = method.getReturnType().getComponentType();
+    Object array = Array.newInstance(arrayComponentType, list.size());
+    if (arrayComponentType.isPrimitive()) {
+      for (int i = 0; i < list.size(); i++) {
+        Array.set(array, i, list.get(i));
+      }
+      return array;
+    } else {
+      return list.toArray((E[])array);
+    }
   }
 
   private <K, V> Map<K, V> executeForMap(SqlSession sqlSession, Object[] args) {
@@ -198,9 +195,9 @@ public class MapperMethod {
     Object param = method.convertArgsToSqlCommandParam(args);
     if (method.hasRowBounds()) {
       RowBounds rowBounds = method.extractRowBounds(args);
-      result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey(), rowBounds);
+      result = sqlSession.selectMap(command.getName(), param, method.getMapKey(), rowBounds);
     } else {
-      result = sqlSession.<K, V>selectMap(command.getName(), param, method.getMapKey());
+      result = sqlSession.selectMap(command.getName(), param, method.getMapKey());
     }
     return result;
   }
@@ -218,32 +215,24 @@ public class MapperMethod {
     }
 
   }
-  
-  /**
-   * sql执行语句和sql的命令类型
-   */
+
   public static class SqlCommand {
 
     private final String name;
     private final SqlCommandType type;
 
     public SqlCommand(Configuration configuration, Class<?> mapperInterface, Method method) {
-      String statementName = mapperInterface.getName() + "." + method.getName();
-      MappedStatement ms = null;
-      if (configuration.hasStatement(statementName)) {
-        ms = configuration.getMappedStatement(statementName);
-      } else if (!mapperInterface.equals(method.getDeclaringClass())) { // issue #35
-        String parentStatementName = method.getDeclaringClass().getName() + "." + method.getName();
-        if (configuration.hasStatement(parentStatementName)) {
-          ms = configuration.getMappedStatement(parentStatementName);
-        }
-      }
+      final String methodName = method.getName();
+      final Class<?> declaringClass = method.getDeclaringClass();
+      MappedStatement ms = resolveMappedStatement(mapperInterface, methodName, declaringClass,
+          configuration);
       if (ms == null) {
-        if(method.getAnnotation(Flush.class) != null){
+        if (method.getAnnotation(Flush.class) != null) {
           name = null;
           type = SqlCommandType.FLUSH;
         } else {
-          throw new BindingException("Invalid bound statement (not found): " + statementName);
+          throw new BindingException("Invalid bound statement (not found): "
+              + mapperInterface.getName() + "." + methodName);
         }
       } else {
         name = ms.getId();
@@ -261,28 +250,39 @@ public class MapperMethod {
     public SqlCommandType getType() {
       return type;
     }
+
+    private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
+        Class<?> declaringClass, Configuration configuration) {
+      String statementId = mapperInterface.getName() + "." + methodName;
+      if (configuration.hasStatement(statementId)) {
+        return configuration.getMappedStatement(statementId);
+      } else if (mapperInterface.equals(declaringClass)) {
+        return null;
+      }
+      for (Class<?> superInterface : mapperInterface.getInterfaces()) {
+        if (declaringClass.isAssignableFrom(superInterface)) {
+          MappedStatement ms = resolveMappedStatement(superInterface, methodName,
+              declaringClass, configuration);
+          if (ms != null) {
+            return ms;
+          }
+        }
+      }
+      return null;
+    }
   }
-  
-  /**
-   * 方法签名
-   */
+
   public static class MethodSignature {
 
-    //是否返回多个结果，即多于一个返回结果
     private final boolean returnsMany;
-    //返回的是否为map
     private final boolean returnsMap;
-    //返回是否为空
     private final boolean returnsVoid;
-    //返回游标
     private final boolean returnsCursor;
-    //返回类型
+    private final boolean returnsOptional;
     private final Class<?> returnType;
-    //映射的key
     private final String mapKey;
     private final Integer resultHandlerIndex;
     private final Integer rowBoundsIndex;
-    //参数名解析器
     private final ParamNameResolver paramNameResolver;
 
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
@@ -295,10 +295,11 @@ public class MapperMethod {
         this.returnType = method.getReturnType();
       }
       this.returnsVoid = void.class.equals(this.returnType);
-      this.returnsMany = (configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray());
+      this.returnsMany = configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray();
       this.returnsCursor = Cursor.class.equals(this.returnType);
+      this.returnsOptional = Optional.class.equals(this.returnType);
       this.mapKey = getMapKey(method);
-      this.returnsMap = (this.mapKey != null);
+      this.returnsMap = this.mapKey != null;
       this.rowBoundsIndex = getUniqueParamIndex(method, RowBounds.class);
       this.resultHandlerIndex = getUniqueParamIndex(method, ResultHandler.class);
       this.paramNameResolver = new ParamNameResolver(configuration, method);
@@ -346,6 +347,15 @@ public class MapperMethod {
 
     public boolean returnsCursor() {
       return returnsCursor;
+    }
+
+    /**
+     * return whether return type is {@code java.util.Optional}.
+     * @return return {@code true}, if return type is {@code java.util.Optional}
+     * @since 3.5.0
+     */
+    public boolean returnsOptional() {
+      return returnsOptional;
     }
 
     private Integer getUniqueParamIndex(Method method, Class<?> paramType) {

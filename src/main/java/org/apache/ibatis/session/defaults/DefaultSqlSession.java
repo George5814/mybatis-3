@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2015 the original author or authors.
+ *    Copyright 2009-2019 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,17 +23,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.ibatis.binding.BindingException;
 import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.exceptions.ExceptionFactory;
 import org.apache.ibatis.exceptions.TooManyResultsException;
-import org.apache.ibatis.executor.BatchExecutor;
 import org.apache.ibatis.executor.BatchResult;
-import org.apache.ibatis.executor.CachingExecutor;
 import org.apache.ibatis.executor.ErrorContext;
 import org.apache.ibatis.executor.Executor;
-import org.apache.ibatis.executor.ReuseExecutor;
-import org.apache.ibatis.executor.SimpleExecutor;
 import org.apache.ibatis.executor.result.DefaultMapResultHandler;
 import org.apache.ibatis.executor.result.DefaultResultContext;
 import org.apache.ibatis.mapping.MappedStatement;
@@ -43,7 +40,6 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
 /**
- * 默认的sql会话
  * The default implementation for {@link SqlSession}.
  * Note that this class is not Thread-Safe.
  *
@@ -51,23 +47,11 @@ import org.apache.ibatis.session.SqlSession;
  */
 public class DefaultSqlSession implements SqlSession {
 
-  //mybatis的配置类
-  private Configuration configuration;
-  /**
-   * 配置sql执行器
-   * 实现类有：{@linkplain }
-   *
-   * @see BatchExecutor
-   * @see CachingExecutor
-   * @see ReuseExecutor
-   * @see SimpleExecutor
-   */
-  private Executor executor;
+  private final Configuration configuration;
+  private final Executor executor;
 
-  //是否自动提交
-  private boolean autoCommit;
+  private final boolean autoCommit;
   private boolean dirty;
-  //游标列表
   private List<Cursor<?>> cursorList;
 
   public DefaultSqlSession(Configuration configuration, Executor executor, boolean autoCommit) {
@@ -83,13 +67,13 @@ public class DefaultSqlSession implements SqlSession {
 
   @Override
   public <T> T selectOne(String statement) {
-    return this.<T>selectOne(statement, null);
+    return this.selectOne(statement, null);
   }
 
   @Override
   public <T> T selectOne(String statement, Object parameter) {
     // Popular vote was to return null on 0 results and throw exception on too many.
-    List<T> list = this.<T>selectList(statement, parameter);
+    List<T> list = this.selectList(statement, parameter);
     if (list.size() == 1) {
       return list.get(0);
     } else if (list.size() > 1) {
@@ -112,9 +96,9 @@ public class DefaultSqlSession implements SqlSession {
   @Override
   public <K, V> Map<K, V> selectMap(String statement, Object parameter, String mapKey, RowBounds rowBounds) {
     final List<? extends V> list = selectList(statement, parameter, rowBounds);
-    final DefaultMapResultHandler<K, V> mapResultHandler = new DefaultMapResultHandler<K, V>(mapKey,
-        configuration.getObjectFactory(), configuration.getObjectWrapperFactory(), configuration.getReflectorFactory());
-    final DefaultResultContext<V> context = new DefaultResultContext<V>();
+    final DefaultMapResultHandler<K, V> mapResultHandler = new DefaultMapResultHandler<>(mapKey,
+            configuration.getObjectFactory(), configuration.getObjectWrapperFactory(), configuration.getReflectorFactory());
+    final DefaultResultContext<V> context = new DefaultResultContext<>();
     for (V o : list) {
       context.nextResultObject(o);
       mapResultHandler.handleResult(context);
@@ -304,7 +288,7 @@ public class DefaultSqlSession implements SqlSession {
 
   @Override
   public <T> T getMapper(Class<T> type) {
-    return configuration.<T>getMapper(type, this);
+    return configuration.getMapper(type, this);
   }
 
   @Override
@@ -323,7 +307,7 @@ public class DefaultSqlSession implements SqlSession {
 
   private <T> void registerCursor(Cursor<T> cursor) {
     if (cursorList == null) {
-      cursorList = new ArrayList<Cursor<?>>();
+      cursorList = new ArrayList<>();
     }
     cursorList.add(cursor);
   }
@@ -334,14 +318,14 @@ public class DefaultSqlSession implements SqlSession {
 
   private Object wrapCollection(final Object object) {
     if (object instanceof Collection) {
-      StrictMap<Object> map = new StrictMap<Object>();
+      StrictMap<Object> map = new StrictMap<>();
       map.put("collection", object);
       if (object instanceof List) {
         map.put("list", object);
       }
       return map;
     } else if (object != null && object.getClass().isArray()) {
-      StrictMap<Object> map = new StrictMap<Object>();
+      StrictMap<Object> map = new StrictMap<>();
       map.put("array", object);
       return map;
     }

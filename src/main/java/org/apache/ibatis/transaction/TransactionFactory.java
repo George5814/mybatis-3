@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2017 the original author or authors.
+ *    Copyright 2009-2019 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import org.apache.ibatis.session.TransactionIsolationLevel;
 /**
  * Creates {@link Transaction} instances.
  *
- * <p>事务工厂接口，使用不同的工厂实现类创建不同的事务实例。
- *
  * @author Clinton Begin
  */
 public interface TransactionFactory {
@@ -44,7 +42,7 @@ public interface TransactionFactory {
    * @since 3.1.0
    */
   Transaction newTransaction(Connection conn);
-  
+
   /**
    * Creates a {@link Transaction} out of a datasource.
    * @param dataSource DataSource to take the connection from
