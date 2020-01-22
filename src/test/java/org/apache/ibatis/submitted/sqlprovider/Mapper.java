@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2018 the original author or authors.
+ *    Copyright 2009-2020 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@ package org.apache.ibatis.submitted.sqlprovider;
 
 import java.util.List;
 import java.util.Map;
-
-import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.DeleteProvider;
 import org.apache.ibatis.annotations.InsertProvider;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.SelectProvider;
 import org.apache.ibatis.annotations.UpdateProvider;
 
@@ -40,6 +39,9 @@ public interface Mapper extends BaseMapper<User> {
 
   @SelectProvider(type = OurSqlBuilder.class, method = "buildGetUsersByCriteriaMapQuery")
   List<User> getUsersByCriteriaMap(Map<String, Object> criteria);
+
+  @SelectProvider(type = OurSqlBuilder.class, method = "buildGetUsersByCriteriaMapWithParamQuery")
+  List<User> getUsersByCriteriaMapWithParam(Map<String, Object> criteria);
 
   @SelectProvider(type = OurSqlBuilder.class, method = "buildGetUsersByNameQuery")
   List<User> getUsersByName(String name, String orderByColumn);

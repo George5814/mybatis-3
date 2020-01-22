@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2019 the original author or authors.
+ *    Copyright 2009-2020 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  *    limitations under the License.
  */
 package org.apache.ibatis.submitted.sqlprovider;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.Reader;
 import java.lang.reflect.Method;
@@ -36,8 +38,6 @@ import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test for https://github.com/mybatis/mybatis-3/issues/1279
@@ -135,7 +135,7 @@ class ProviderMethodResolutionTest {
 
   interface ProvideMethodResolverMapper {
 
-    @SelectProvider(type = MethodResolverBasedSqlProvider.class)
+    @SelectProvider(MethodResolverBasedSqlProvider.class)
     int select();
 
     @SelectProvider(type = MethodResolverBasedSqlProvider.class, method = "provideSelect2Sql")
@@ -147,7 +147,7 @@ class ProviderMethodResolutionTest {
     @SelectProvider(type = CustomMethodResolverBasedSqlProvider.class)
     int select4();
 
-    @DeleteProvider(type = ReservedMethodNameBasedSqlProvider.class)
+    @DeleteProvider(ReservedMethodNameBasedSqlProvider.class)
     int delete();
 
     class MethodResolverBasedSqlProvider implements ProviderMethodResolver {
@@ -211,7 +211,7 @@ class ProviderMethodResolutionTest {
 
   interface DefaultProvideMethodResolverReturnTypeMatchedMethodIsNoneMapper {
 
-    @InsertProvider(type = MethodResolverBasedSqlProvider.class)
+    @InsertProvider(MethodResolverBasedSqlProvider.class)
     int insert();
 
     class MethodResolverBasedSqlProvider implements ProviderMethodResolver {
@@ -224,7 +224,7 @@ class ProviderMethodResolutionTest {
 
   interface DefaultProvideMethodResolverMatchedMethodIsMultipleMapper {
 
-    @UpdateProvider(type = MethodResolverBasedSqlProvider.class)
+    @UpdateProvider(MethodResolverBasedSqlProvider.class)
     int update();
 
     class MethodResolverBasedSqlProvider implements ProviderMethodResolver {

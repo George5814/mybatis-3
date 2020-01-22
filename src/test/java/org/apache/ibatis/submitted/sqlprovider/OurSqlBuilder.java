@@ -1,5 +1,5 @@
 /**
- *    Copyright 2009-2019 the original author or authors.
+ *    Copyright 2009-2020 the original author or authors.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  */
 package org.apache.ibatis.submitted.sqlprovider;
 
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.builder.annotation.ProviderContext;
-import org.apache.ibatis.jdbc.SQL;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -26,6 +22,10 @@ import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.builder.annotation.ProviderContext;
+import org.apache.ibatis.jdbc.SQL;
 
 public class OurSqlBuilder {
 
@@ -79,6 +79,19 @@ public class OurSqlBuilder {
         WHERE("id = #{id}");
       }
       if (criteria.get("name") != null) {
+        WHERE("name like #{name} || '%'");
+      }
+    }}.toString();
+  }
+
+  public String buildGetUsersByCriteriaMapWithParamQuery(@Param("id") Integer id, @Param("name") String name) {
+    return new SQL() {{
+      SELECT("*");
+      FROM("users");
+      if (id != null) {
+        WHERE("id = #{id}");
+      }
+      if (name != null) {
         WHERE("name like #{name} || '%'");
       }
     }}.toString();
